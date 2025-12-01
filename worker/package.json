@@ -1,0 +1,20 @@
+{
+  "name": "automation-worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+  },
+  "dependencies": {
+    "bullmq": "^2.0.0",
+    "ioredis": "^5.0.0",
+    "@prisma/client": "^4.0.0",
+    "prisma": "^4.0.0",
+    "dotenv": "^16.0.0",
+    "axios": "^1.0.0"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}
