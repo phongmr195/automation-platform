@@ -12,7 +12,7 @@ const concurrency = Number(process.env.WORKER_CONCURRENCY || 5);
 
 const worker = new Worker(
   "executions",
-  async job => {
+  async (job) => {
     if (job.name === "execute-workflow") {
       await runWorkflowExecution(job.data.executionId);
     }
@@ -20,7 +20,7 @@ const worker = new Worker(
   { connection, concurrency }
 );
 
-worker.on("completed", job => {
+worker.on("completed", (job) => {
   console.log(`[worker] execution ${job.id} completed`);
 });
 

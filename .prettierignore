@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+dist
+build
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Prisma
+prisma/migrations
+
+# Coverage
+coverage

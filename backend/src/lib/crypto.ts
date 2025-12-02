@@ -9,7 +9,9 @@ if (KEY.length !== 32) {
 
 export function encryptJSON(obj: any) {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv, { authTagLength: 16 });
+  const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv, {
+    authTagLength: 16,
+  });
   const plain = Buffer.from(JSON.stringify(obj));
   const ciphertext = Buffer.concat([cipher.update(plain), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -22,7 +24,9 @@ export function decryptJSON(encrypted: Buffer, iv: Buffer) {
   // encrypted = ciphertext + tag (last 16 bytes tag)
   const tag = encrypted.slice(encrypted.length - 16);
   const ciphertext = encrypted.slice(0, encrypted.length - 16);
-  const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv, { authTagLength: 16 });
+  const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv, {
+    authTagLength: 16,
+  });
   decipher.setAuthTag(tag);
   const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   return JSON.parse(plain.toString("utf-8"));

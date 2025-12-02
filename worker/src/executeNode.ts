@@ -6,14 +6,19 @@ export async function executeNode(node, context) {
     let headers = { ...(node.config.headers || {}) };
 
     if (node.config.credentialId) {
-      const cred = await getCredential(context.ownerId, node.config.credentialId);
+      const cred = await getCredential(
+        context.ownerId,
+        node.config.credentialId
+      );
 
       if (cred.type === "apiKey") {
         headers["Authorization"] = `Bearer ${cred.secret.key}`;
       }
 
       if (cred.type === "basic") {
-        const b64 = Buffer.from(`${cred.secret.username}:${cred.secret.password}`).toString("base64");
+        const b64 = Buffer.from(
+          `${cred.secret.username}:${cred.secret.password}`
+        ).toString("base64");
         headers["Authorization"] = `Basic ${b64}`;
       }
 
@@ -26,7 +31,7 @@ export async function executeNode(node, context) {
       url: node.config.url,
       method: node.config.method || "GET",
       headers,
-      data: node.config.body
+      data: node.config.body,
     });
 
     return res.data;

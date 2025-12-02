@@ -1,4 +1,5 @@
 docker-compose up --build
+
 # Automation Platform
 
 This repository is a minimal skeleton for an automation platform with three components:
@@ -10,12 +11,14 @@ This repository is a minimal skeleton for an automation platform with three comp
 This README documents how to set up and run the project for local development.
 
 **Prerequisites**:
+
 - **Docker** (optional but recommended for DB & Redis)
 - **Node.js** (v18+ recommended) and `npm`
 - `psql` (optional, for manual DB inspection)
 - macOS users: default shell is `zsh` (commands below use zsh)
 
 **Ports used by the stack**:
+
 - `3000` — backend HTTP API
 - `5432` or `5433` — Postgres (depends on local conflict; see notes)
 - `6379` — Redis
@@ -98,6 +101,7 @@ npm run dev
 2. The Vite dev server will print the local URL (e.g. `http://localhost:5173`).
 
 **Common Prisma commands**
+
 - Generate client after schema changes:
 
 ```bash
@@ -121,6 +125,7 @@ npx prisma migrate reset --force
 ```
 
 **Troubleshooting notes**
+
 - If you see errors about `@prisma/client did not initialize yet`, run `npx prisma generate` in the package where the error originated (`backend` or `worker`).
 - Keep `prisma` (devDependency) and `@prisma/client` versions aligned across `backend` and `worker` to avoid runtime mismatches.
 - If you run into `PRISMA_CLIENT_ENGINE_TYPE` or query-engine panics, try switching engine type or reinstalling dependencies:
@@ -134,8 +139,8 @@ rm -rf node_modules package-lock.json && npm install
 ```
 
 **Developer tips**
+
 - Each package has its own `prisma/schema.prisma`. You can keep these copies if you want isolation. Run `npx prisma generate` inside each package after schema changes.
 - To run the whole system quickly during development: start Redis and Postgres with docker-compose, then start the backend and worker in separate terminals.
 
 If you want, I can add scripted shortcuts (root-level `package.json` scripts) to run generate/migrate for both `backend` and `worker`, or add `Dockerfile`s and update `docker-compose` to build service images.
-

@@ -21,7 +21,7 @@ credentialRoute.post("/", async (c) => {
     provider: z.string(),
     type: z.enum(["apiKey", "oauth", "basic"]),
     secret: z.any(),
-    meta: z.any().optional()
+    meta: z.any().optional(),
   });
 
   const { name, provider, type, secret, meta } = schema.parse(body);
@@ -42,8 +42,8 @@ credentialRoute.post("/", async (c) => {
       name: created.name,
       provider: created.provider,
       type: created.type,
-      createdAt: created.createdAt
-    }
+      createdAt: created.createdAt,
+    },
   });
 });
 
@@ -72,7 +72,7 @@ credentialRoute.get("/:id", async (c) => {
     name: row.name,
     provider: row.provider,
     type: row.type,
-    meta: row.meta
+    meta: row.meta,
   });
 });
 
@@ -92,7 +92,7 @@ credentialRoute.get("/:id/secret", async (c) => {
     id: row.id,
     provider: row.provider,
     type: row.type,
-    secret: row.secret
+    secret: row.secret,
   });
 });
 

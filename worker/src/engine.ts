@@ -2,7 +2,9 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import axios from "axios";
 import { NodeVM } from "vm2";
 
-const globalForPrisma = globalThis as typeof globalThis & { prisma?: PrismaClient };
+const globalForPrisma = globalThis as typeof globalThis & {
+  prisma?: PrismaClient;
+};
 const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
@@ -27,7 +29,8 @@ export async function runWorkflowExecution(executionId: string) {
 
   if (!execution) throw new Error("Execution not found");
 
-  const definition = (execution.definitionSnapshot ?? execution.version?.definition) as any;
+  const definition = (execution.definitionSnapshot ??
+    execution.version?.definition) as any;
   if (!definition) throw new Error("Execution definition snapshot missing");
 
   const nodes = definition.nodes ?? [];
@@ -88,7 +91,7 @@ export async function runWorkflowExecution(executionId: string) {
 
         if (attempts > 0 && errorPolicy === "retry") {
           await log(node.id, "retry", { error: err.message });
-          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempts)));
+          await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempts)));
           continue;
         }
 
@@ -122,13 +125,18 @@ export async function runWorkflowExecution(executionId: string) {
     if (node.type === "set") {
       const key = node.config.key;
       const template = node.config.value;
-      const value = template.replace(/\{\{(.*?)\}\}/g, (_, varName) => context[varName.trim()] ?? null);
+      const value = template.replace(
+        /\{\{(.*?)\}\}/g,
+        (_, varName) => context[varName.trim()] ?? null
+      );
       return { [key]: value };
     }
 
     if (node.type === "code") {
       const vm = new NodeVM({ sandbox: { context } });
-      const fn = vm.run(`module.exports = async function(input){ ${node.config.code} }`);
+      const fn = vm.run(
+        `module.exports = async function(input){ ${node.config.code} }`
+      );
       return await fn(context);
     }
 

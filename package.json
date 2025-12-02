@@ -1,5 +1,15 @@
 {
+  "name": "automation-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+  },
   "dependencies": {
     "@prisma/client": "^6.19.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.7.3"
   }
 }

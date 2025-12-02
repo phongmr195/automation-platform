@@ -26,7 +26,7 @@ export const workflowRoutes = (opts: {
       nodes: (def.nodes ?? []).map((n: any) => ({
         id: n.id,
         type: n.type,
-        name: n.name ?? n.type.toUpperCase(),   // fallback
+        name: n.name ?? n.type.toUpperCase(), // fallback
         position: n.position ?? { x: 0, y: 0 }, // fallback
         data: n.data ?? {},
         config: n.config ?? {},
@@ -42,11 +42,14 @@ export const workflowRoutes = (opts: {
 
   router.post(
     "/",
-    zValidator("json", z.object({
-      name: z.string(),
-      definition: WorkflowDefinitionSchema,
-    })),
-    async c => {
+    zValidator(
+      "json",
+      z.object({
+        name: z.string(),
+        definition: WorkflowDefinitionSchema,
+      })
+    ),
+    async (c) => {
       const body = c.req.valid("json");
       const normalized = normalizeWorkflow(body.definition);
       const workflow = await prisma.workflow.create({
@@ -61,7 +64,7 @@ export const workflowRoutes = (opts: {
   );
 
   // LIST WORKFLOWS
-  router.get("/", async c => {
+  router.get("/", async (c) => {
     const list = await prisma.workflow.findMany({
       orderBy: { createdAt: "desc" },
     });
@@ -69,7 +72,7 @@ export const workflowRoutes = (opts: {
   });
 
   // GET WORKFLOW
-  router.get("/:id", async c => {
+  router.get("/:id", async (c) => {
     const id = c.req.param("id");
 
     const wf = await prisma.workflow.findUnique({ where: { id } });
@@ -81,11 +84,14 @@ export const workflowRoutes = (opts: {
   // UPDATE WORKFLOW
   router.put(
     "/:id",
-    zValidator("json", z.object({
-      name: z.string(),
-      definition: WorkflowDefinitionSchema,
-    })),
-    async c => {
+    zValidator(
+      "json",
+      z.object({
+        name: z.string(),
+        definition: WorkflowDefinitionSchema,
+      })
+    ),
+    async (c) => {
       const id = c.req.param("id");
       const body = c.req.valid("json");
       const normalized = normalizeWorkflow(body.definition);
@@ -102,7 +108,7 @@ export const workflowRoutes = (opts: {
     }
   );
   // DELETE WORKFLOW
-  router.delete("/:id", async c => {
+  router.delete("/:id", async (c) => {
     const id = c.req.param("id");
 
     await prisma.execution.deleteMany({ where: { workflowId: id } });
@@ -112,7 +118,7 @@ export const workflowRoutes = (opts: {
   });
 
   // ENQUEUE EXECUTION
-  router.post("/:id/execute", async c => {
+  router.post("/:id/execute", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json();
 

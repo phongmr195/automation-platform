@@ -21,8 +21,8 @@ export async function createCredential(
       type,
       encrypted,
       iv,
-      meta: meta ?? {}
-    }
+      meta: meta ?? {},
+    },
   });
 }
 
@@ -38,14 +38,21 @@ export async function getCredential(ownerId: string, id: string) {
     provider: row.provider,
     type: row.type,
     meta: row.meta,
-    secret
+    secret,
   };
 }
 
 export async function listCredentials(ownerId: string) {
   return prisma.credential.findMany({
     where: { ownerId },
-    select: { id: true, name: true, provider: true, type: true, meta: true, createdAt: true }
+    select: {
+      id: true,
+      name: true,
+      provider: true,
+      type: true,
+      meta: true,
+      createdAt: true,
+    },
   });
 }
 
