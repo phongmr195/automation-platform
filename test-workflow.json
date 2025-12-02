@@ -24,13 +24,13 @@
         "type": "http",
         "name": "Send to Telegram",
         "config": {
-          "url": "https://api.telegram.org/bot8335511507:AAH-krYyKMbCgzG7xQaE6OX1m-K-f5l1dKc/sendMessage",
+          "url": "https://api.telegram.org/bot{{env.TELEGRAM_BOT_TOKEN}}/sendMessage",
           "method": "POST",
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
-            "chat_id": "5974035313",
+            "chat_id": "{{env.TELEGRAM_CHAT_ID}}",
             "text": "{{nodes.2.message}}",
             "parse_mode": "Markdown",
             "disable_web_page_preview": true

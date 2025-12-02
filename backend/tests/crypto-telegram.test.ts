@@ -234,8 +234,8 @@ describe("Crypto Price to Telegram Workflow", () => {
 
   describe("Node 3: Send to Telegram", () => {
     const TELEGRAM_API = "https://api.telegram.org";
-    const BOT_TOKEN = "8335511507:AAH-krYyKMbCgzG7xQaE6OX1m-K-f5l1dKc";
-    const CHAT_ID = "5974035313";
+    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "test-bot-token";
+    const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "test-chat-id";
 
     afterEach(() => {
       nock.cleanAll();
@@ -351,8 +351,8 @@ describe("Crypto Price to Telegram Workflow", () => {
     it("should execute complete workflow successfully", async () => {
       const COINGECKO_URL = "https://api.coingecko.com";
       const TELEGRAM_API = "https://api.telegram.org";
-      const BOT_TOKEN = "8335511507:AAH-krYyKMbCgzG7xQaE6OX1m-K-f5l1dKc";
-      const CHAT_ID = "5974035313";
+      const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "test-bot-token";
+      const CHAT_ID = process.env.TELEGRAM_CHAT_ID || "test-chat-id";
 
       // Step 1: Mock CoinGecko API
       const mockPrices = {

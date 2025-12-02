@@ -50,7 +50,15 @@ export async function runWorkflowExecution(executionId: string) {
     parentCount[edge.target] += 1;
   });
 
-  let context: Record<string, any> = execution.input ?? {};
+  let context: Record<string, any>;
+  if (execution.input === null || execution.input === undefined) {
+    context = {};
+  } else if (typeof execution.input === "object") {
+    context = execution.input as Record<string, any>;
+  } else {
+    // wrap primitive inputs so callers can always treat context as an object
+    context = { input: execution.input };
+  }
   let processedNodes = 0;
   const logBuffer: Prisma.NodeLogCreateManyInput[] = [];
 
@@ -117,12 +125,24 @@ export async function runWorkflowExecution(executionId: string) {
     function interpolate(obj: any): any {
       if (typeof obj === "string") {
         return obj.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-          const keys = path.trim().split(".");
+          const trimmedPath = path.trim();
+
+          // Handle environment variables: {{env.VARIABLE_NAME}}
+          if (trimmedPath.startsWith("env.")) {
+            const envVar = trimmedPath.substring(4); // Remove 'env.' prefix
+            const envValue = process.env[envVar];
+            return envValue !== undefined ? envValue : match;
+          }
+
+          // Handle context variables: {{nodes.1.field}}
+          const keys = trimmedPath.split(".");
           let value = context;
           for (const key of keys) {
             value = value?.[key];
           }
-          return value !== undefined ? value : match;
+          if (value === undefined) return match;
+          if (typeof value === "object") return JSON.stringify(value);
+          return String(value);
         });
       }
       if (Array.isArray(obj)) {
@@ -154,10 +174,7 @@ export async function runWorkflowExecution(executionId: string) {
     if (node.type === "set") {
       const key = node.config.key;
       const template = node.config.value;
-      const value = template.replace(
-        /\{\{(.*?)\}\}/g,
-        (_, varName) => context[varName.trim()] ?? null
-      );
+      const value = interpolate(template);
       return { [key]: value };
     }
 

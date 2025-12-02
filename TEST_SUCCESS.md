@@ -25,8 +25,8 @@ Your crypto price monitoring workflow has been successfully created, published, 
 
 3. **Node 3: Send to Telegram** ✅
    - Sent formatted message to your Telegram chat
-   - Chat ID: 5974035313
-   - Bot Token: 8335511507:AAH-krYyKMbCgzG7xQaE6OX1m-K-f5l1dKc
+   - Chat ID: (from environment variable)
+   - Bot Token: (from environment variable)
 
 ## 📱 Check Your Telegram!
 

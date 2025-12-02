@@ -307,7 +307,7 @@ describe("Crypto Price Workflow - Integration Tests", () => {
 
     it("should validate Telegram message payload", () => {
       const telegramPayload = {
-        chat_id: "5974035313",
+        chat_id: process.env.TELEGRAM_CHAT_ID || "test-chat-id",
         text: "🪙 Crypto Update",
         parse_mode: "Markdown",
         disable_web_page_preview: true,

@@ -62,13 +62,35 @@ npx prisma migrate deploy
 npm run dev
 ```
 
-Environment variables are read from `backend/.env`. If you started Postgres with Docker but it bound to `5433` (due to a local Postgres on `5432`), update `DATABASE_URL` accordingly, for example:
+### Environment Variables
 
-```env
-DATABASE_URL="postgresql://prisma:prisma@localhost:5433/automation?schema=public"
-REDIS_URL="redis://localhost:6379"
-PORT=3000
-```
+⚠️ **Important**: Never commit `.env` files with sensitive credentials to version control.
+
+Environment variables are read from `backend/.env`. For security:
+
+1. Copy the example file:
+
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+
+2. Fill in your actual credentials in `backend/.env`:
+
+   ```env
+   DATABASE_URL="postgresql://prisma:prisma@localhost:5432/automation?schema=public"
+   REDIS_URL="redis://localhost:6379"
+   PORT=3000
+   CREDENTIAL_ENCRYPTION_KEY="your-32-byte-base64-key"
+   TELEGRAM_BOT_TOKEN="your-bot-token"
+   TELEGRAM_CHAT_ID="your-chat-id"
+   ```
+
+3. Generate a secure encryption key:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+   ```
+
+📖 See [SECURITY.md](./SECURITY.md) for complete security best practices.
 
 **Worker — Local development**
 
