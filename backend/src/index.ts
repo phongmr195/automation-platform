@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../shared/prisma";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 
@@ -10,7 +10,6 @@ import { workflowRoutes } from "./routes/workflows";
 dotenv.config();
 
 const app = new Hono();
-const prisma = new PrismaClient();
 
 // Redis connection
 const redis = new IORedis(process.env.REDIS_URL);

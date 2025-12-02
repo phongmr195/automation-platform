@@ -2,13 +2,13 @@
 import { Worker, Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../shared/prisma';
 import axios from 'axios';
 import { NodeVM } from 'vm2';
 
 dotenv.config();
 
-const prisma = new PrismaClient();
+// use shared prisma client singleton
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
 const queueName = 'executions';
 
