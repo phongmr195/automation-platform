@@ -15,7 +15,7 @@ export const workflowRoutes = (opts: {
   // CREATE WORKFLOW
   interface CreateWorkflowBody {
     name: string;
-    definition: Prisma.InputJsonValue;
+    definition: any;
   }
 
   type CreatedWorkflow = Awaited<ReturnType<typeof prisma.workflow.create>>;
@@ -116,24 +116,49 @@ export const workflowRoutes = (opts: {
     const id = c.req.param("id");
     const body = await c.req.json();
 
-    const wf = await prisma.workflow.findUnique({ where: { id } });
+    const wf = await prisma.workflow.findUnique({
+      where: { id },
+      include: {
+        publishedVersion: true,
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+        },
+      },
+    });
+
     if (!wf) return c.json({ error: "Workflow not found" }, 404);
+
+    const versionToRun = wf.publishedVersion ?? wf.versions[0];
+    if (!versionToRun) {
+      return c.json({ error: "Workflow has no versions to execute" }, 400);
+    }
 
     const execution = await prisma.execution.create({
       data: {
         workflowId: id,
+        versionId: versionToRun.id,
         status: "queued",
         input: body,
+        definitionSnapshot: versionToRun.definition,
       },
+      select: { id: true },
     });
 
-    // enqueue a job
-    await executionQueue.add("execute-workflow", {
-      executionId: execution.id,
-      workflowId: id,
-    });
+    await executionQueue.add(
+      "execute-workflow",
+      {
+        executionId: execution.id,
+      },
+      {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 500 },
+        removeOnComplete: 100,
+        removeOnFail: 100,
+      }
+    );
 
-    return c.json({ executionId: execution.id });
+    return c.json({ executionId: execution.id, versionId: versionToRun.id });
   });
 
   return router;

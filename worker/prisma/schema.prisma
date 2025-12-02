@@ -1,29 +1,87 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 model Workflow {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   name      String
-  definition Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  publishedVersionId String?          @unique
+  publishedVersion   WorkflowVersion? @relation("PublishedVersionRelation", fields: [publishedVersionId], references: [id])
+
+  versions WorkflowVersion[]
+
+  executions Execution[]
+}
+
+model WorkflowVersion {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+
+  versionNumber Int
+  definition    Json
+  isDraft       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  publishedInWorkflow Workflow? @relation("PublishedVersionRelation")
+
   executions Execution[]
 }
 
 model Execution {
-  id         String   @id @default(uuid())
+  id         String   @id @default(cuid())
   workflowId String
-  status     String
-  input      Json?
-  output     Json?
-  startedAt  DateTime @default(now())
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+
+  versionId String
+  version   WorkflowVersion @relation(fields: [versionId], references: [id])
+
+  status String
+  input  Json?
+  output Json?
+  error  String?
+  definitionSnapshot Json?
+  startedAt DateTime?
   finishedAt DateTime?
-  logs       Json?
-  Workflow   Workflow @relation(fields: [workflowId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logs NodeLog[]
+}
+
+model NodeLog {
+  id String @id @default(cuid())
+
+  executionId String
+  execution   Execution @relation(fields: [executionId], references: [id])
+
+  nodeId String
+  status String
+  data   Json?
+
+  createdAt DateTime @default(now())
+}
+
+model Credential {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  provider  String
+  type      String
+  encrypted Bytes
+  iv        Bytes
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
 }

@@ -6,12 +6,12 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
   },
   "dependencies": {
-    "@prisma/client": "^4.16.2",
+    "@prisma/client": "^6.19.0",
     "axios": "^1.13.2",
     "bullmq": "^2.4.0",
     "dotenv": "^16.6.1",
     "ioredis": "^5.8.2",
-    "prisma": "^4.0.0",
+    "prisma": "^6.19.0",
     "vm2": "^3.10.0"
   },
   "devDependencies": {

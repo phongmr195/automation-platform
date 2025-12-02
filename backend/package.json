@@ -12,16 +12,16 @@
   "dependencies": {
     "@hono/node-server": "^1.9.6",
     "@hono/zod-validator": "^0.7.5",
-    "@prisma/client": "^4.0.0",
+    "@prisma/client": "^6.19.0",
     "bullmq": "^2.0.0",
     "dotenv": "^16.0.0",
     "hono": "^4.0.0",
     "ioredis": "^5.0.0",
     "pg": "^8.0.0",
-    "prisma": "^4.0.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "prisma": "^6.19.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
   }
