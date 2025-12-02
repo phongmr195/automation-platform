@@ -1,0 +1,70 @@
+{
+  "name": "Crypto Price Monitor",
+  "description": "Fetches cryptocurrency prices every hour and sends to Telegram",
+  "trigger": {
+    "type": "schedule",
+    "config": {
+      "cron": "0 * * * *",
+      "comment": "Runs every hour at minute 0"
+    }
+  },
+  "definition": {
+    "nodes": [
+      {
+        "id": "fetch-prices",
+        "type": "http",
+        "name": "Fetch Crypto Prices from CoinGecko",
+        "position": { "x": 100, "y": 100 },
+        "config": {
+          "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,cardano,solana,ripple,dogecoin,polkadot,polygon&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true",
+          "method": "GET",
+          "headers": {
+            "Accept": "application/json"
+          }
+        }
+      },
+      {
+        "id": "format-message",
+        "type": "transform",
+        "name": "Format Telegram Message",
+        "position": { "x": 350, "y": 100 },
+        "config": {
+          "code": "const prices = context.nodes['fetch-prices']; let message = '🪙 *Crypto Price Update*\\n━━━━━━━━━━━━━━━━\\n\\n'; const coins = []; for (const [coin, data] of Object.entries(prices)) { coins.push({ name: coin, price: data.usd, change: data.usd_24h_change || 0 }); } coins.sort((a, b) => b.price - a.price); for (const coin of coins) { const change = coin.change; const emoji = change >= 0 ? '📈' : '📉'; const coinName = coin.name.charAt(0).toUpperCase() + coin.name.slice(1).replace('-', ' '); const formattedPrice = coin.price >= 1 ? coin.price.toFixed(2) : coin.price.toFixed(6); message += `${emoji} *${coinName}*\\n💵 $${formattedPrice} (${change >= 0 ? '+' : ''}${change.toFixed(2)}%)\\n\\n`; } message += '━━━━━━━━━━━━━━━━\\n🕐 ' + new Date().toLocaleString('en-US', { timeZone: 'UTC', dateStyle: 'medium', timeStyle: 'short' }) + ' UTC'; return { message };"
+        }
+      },
+      {
+        "id": "send-telegram",
+        "type": "http",
+        "name": "Send to Telegram",
+        "position": { "x": 600, "y": 100 },
+        "config": {
+          "url": "TELEGRAM_API_URL_PLACEHOLDER",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "chat_id": "CHAT_ID_PLACEHOLDER",
+            "text": "{{nodes.format-message.message}}",
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": true
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "fetch-prices",
+        "target": "format-message",
+        "label": "prices"
+      },
+      {
+        "id": "e2",
+        "source": "format-message",
+        "target": "send-telegram",
+        "label": "formatted message"
+      }
+    ]
+  }
+}

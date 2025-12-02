@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import * as service from "../services/credential.service";
+import * as service from "../services/credential";
 
 export const credentialRoute = new Hono();
 

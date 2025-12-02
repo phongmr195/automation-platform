@@ -52,10 +52,21 @@ export const workflowRoutes = (opts: {
     async (c) => {
       const body = c.req.valid("json");
       const normalized = normalizeWorkflow(body.definition);
+
+      // Create workflow with initial version
       const workflow = await prisma.workflow.create({
         data: {
           name: body.name,
-          definition: normalized,
+          versions: {
+            create: {
+              versionNumber: 1,
+              definition: normalized,
+              isDraft: true,
+            },
+          },
+        },
+        include: {
+          versions: true,
         },
       });
 

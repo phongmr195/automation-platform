@@ -113,11 +113,40 @@ export async function runWorkflowExecution(executionId: string) {
   }
 
   async function executeNode(node: any): Promise<any> {
+    // Helper function to interpolate templates like {{nodes.1.message}}
+    function interpolate(obj: any): any {
+      if (typeof obj === "string") {
+        return obj.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+          const keys = path.trim().split(".");
+          let value = context;
+          for (const key of keys) {
+            value = value?.[key];
+          }
+          return value !== undefined ? value : match;
+        });
+      }
+      if (Array.isArray(obj)) {
+        return obj.map((item) => interpolate(item));
+      }
+      if (obj && typeof obj === "object") {
+        const result: any = {};
+        for (const [key, val] of Object.entries(obj)) {
+          result[key] = interpolate(val);
+        }
+        return result;
+      }
+      return obj;
+    }
+
     if (node.type === "http") {
+      // Interpolate body templates
+      const body = node.config.body ? interpolate(node.config.body) : undefined;
+
       const res = await axios({
         method: node.config.method,
         url: node.config.url,
-        data: node.config.body ?? undefined,
+        headers: node.config.headers,
+        data: body,
       });
       return res.data;
     }
@@ -132,12 +161,11 @@ export async function runWorkflowExecution(executionId: string) {
       return { [key]: value };
     }
 
-    if (node.type === "code") {
-      const vm = new NodeVM({ sandbox: { context } });
-      const fn = vm.run(
-        `module.exports = async function(input){ ${node.config.code} }`
-      );
-      return await fn(context);
+    if (node.type === "transform" || node.type === "code") {
+      const vm = new NodeVM({ sandbox: { context }, timeout: 10000 });
+      const code = node.config.code || "";
+      const fn = vm.run(`module.exports = function() { ${code} }`);
+      return fn();
     }
 
     throw new Error("Unknown node type: " + node.type);
@@ -151,6 +179,11 @@ export async function runWorkflowExecution(executionId: string) {
       const node = queue.shift() as any;
       const output = await runNode(node);
 
+      // Store node output in context for later reference
+      if (!context.nodes) context.nodes = {};
+      context.nodes[node.id] = output;
+
+      // Also merge output into context root for backwards compatibility
       Object.assign(context, output);
       processedNodes += 1;
 

@@ -1,6 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
-import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 
 // singleton Prisma client to avoid multiple instances during hot reload
@@ -13,8 +15,6 @@ import IORedis from "ioredis";
 import { workflowRoutes } from "./routes/workflows";
 import { workflowVersioning } from "./routes/workflowVersioning";
 import { credentialRoute } from "./routes/credentials";
-
-dotenv.config();
 
 const app = new Hono();
 

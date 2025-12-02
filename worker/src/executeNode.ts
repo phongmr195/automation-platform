@@ -1,5 +1,33 @@
 import axios from "axios";
-import { getCredential } from "../../backend/src/services/credential.service";
+import { NodeVM } from "vm2";
+import { getCredential } from "../../backend/src/services/credential";
+
+/**
+ * Interpolate template strings like {{nodes.1.data}} with actual context values
+ */
+function interpolate(obj: any, context: any): any {
+  if (typeof obj === "string") {
+    return obj.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+      const keys = path.trim().split(".");
+      let value = context;
+      for (const key of keys) {
+        value = value?.[key];
+      }
+      return value !== undefined ? value : match;
+    });
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => interpolate(item, context));
+  }
+  if (obj && typeof obj === "object") {
+    const result: any = {};
+    for (const [key, val] of Object.entries(obj)) {
+      result[key] = interpolate(val, context);
+    }
+    return result;
+  }
+  return obj;
+}
 
 export async function executeNode(node, context) {
   if (node.type === "http") {
@@ -27,13 +55,32 @@ export async function executeNode(node, context) {
       }
     }
 
+    // Interpolate body templates
+    const body = node.config.body
+      ? interpolate(node.config.body, context)
+      : undefined;
+
     const res = await axios({
       url: node.config.url,
       method: node.config.method || "GET",
       headers,
-      data: node.config.body,
+      data: body,
     });
 
     return res.data;
   }
+
+  if (node.type === "transform" || node.type === "code") {
+    // Execute JavaScript transformation code
+    const vm = new NodeVM({
+      sandbox: { context },
+      timeout: 10000,
+    });
+
+    const code = node.config.code || "";
+    const fn = vm.run(`module.exports = function() { ${code} }`);
+    return fn();
+  }
+
+  throw new Error(`Unknown node type: ${node.type}`);
 }

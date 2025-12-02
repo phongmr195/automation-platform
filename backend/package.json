@@ -6,6 +6,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init"
   },
@@ -13,6 +16,7 @@
     "@hono/node-server": "^1.9.6",
     "@hono/zod-validator": "^0.7.5",
     "@prisma/client": "^6.19.0",
+    "axios": "^1.13.2",
     "bullmq": "^2.0.0",
     "dotenv": "^16.0.0",
     "hono": "^4.0.0",
@@ -21,7 +25,12 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "nock": "^13.5.0",
     "prisma": "^6.19.0",
+    "ts-jest": "^29.1.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
   }
