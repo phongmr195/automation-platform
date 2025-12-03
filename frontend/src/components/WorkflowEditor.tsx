@@ -1,0 +1,132 @@
+import { Save, Play } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { workflowApi } from '../services/api';
+import { useWorkflowStore } from '../stores/workflowStore';
+import { toast } from '../utils/alerts';
+import NodePalette from './NodePalette';
+import WorkflowCanvas from './WorkflowCanvas';
+import NodeConfigPanel from './NodeConfigPanel';
+
+export default function WorkflowEditor() {
+  const { workflow, nodes, connections, updateMetadata } = useWorkflowStore();
+
+  const saveWorkflowMutation = useMutation({
+    mutationFn: async () => {
+      const workflowData = {
+        name: workflow?.name || 'New Workflow',
+        description: workflow?.description || '',
+        nodes,
+        connections,
+        triggers: workflow?.triggers || [],
+        settings: workflow?.settings || {
+          timezone: 'Asia/Ho_Chi_Minh',
+          timeout: 300000,
+          retryOnError: true,
+          maxRetries: 3,
+          retryDelay: 5000,
+        },
+        active: workflow?.active || false,
+      };
+
+      if (workflow?.id) {
+        return workflowApi.updateWorkflow(workflow.id, workflowData);
+      } else {
+        return workflowApi.createWorkflow(workflowData);
+      }
+    },
+    onSuccess: () => {
+      toast.success('Workflow đã được lưu thành công!');
+    },
+    onError: (error) => {
+      toast.error('Lỗi lưu workflow: ' + String(error));
+    },
+  });
+
+  const executeWorkflowMutation = useMutation({
+    mutationFn: async () => {
+      // Auto-save first if no ID
+      let workflowId = workflow?.id;
+      
+      if (!workflowId) {
+        const workflowData = {
+          name: workflow?.name || 'New Workflow',
+          description: workflow?.description || '',
+          nodes,
+          connections,
+          triggers: [],
+          settings: {
+            timezone: 'Asia/Ho_Chi_Minh',
+            timeout: 300000,
+            retryOnError: true,
+            maxRetries: 3,
+            retryDelay: 5000,
+          },
+          active: false,
+        };
+        
+        const result = await workflowApi.createWorkflow(workflowData);
+        workflowId = result.workflow.id;
+      }
+      
+      return workflowApi.executeWorkflow(workflowId);
+    },
+    onSuccess: () => {
+      toast.success('Workflow đã được thực thi thành công!');
+    },
+    onError: (error) => {
+      toast.error('Lỗi thực thi workflow: ' + String(error));
+    },
+  });
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <div className="flex-1">
+          <input
+            type="text"
+            value={workflow?.name || 'Untitled Workflow'}
+            onChange={(e) => updateMetadata({ name: e.target.value })}
+            className="text-xl font-semibold border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+          />
+          <input
+            type="text"
+            value={workflow?.description || ''}
+            onChange={(e) => updateMetadata({ description: e.target.value })}
+            placeholder="Add description..."
+            className="block text-sm text-gray-500 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 mt-1"
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => executeWorkflowMutation.mutate()}
+            disabled={executeWorkflowMutation.isPending || nodes.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-4 h-4" />
+            {executeWorkflowMutation.isPending ? 'Running...' : 'Run'}
+          </button>
+          
+          <button
+            onClick={() => saveWorkflowMutation.mutate()}
+            disabled={saveWorkflowMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saveWorkflowMutation.isPending ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        <NodePalette />
+        <div className="flex-1">
+          <WorkflowCanvas />
+        </div>
+        <NodeConfigPanel />
+      </div>
+    </div>
+  );
+}

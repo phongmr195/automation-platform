@@ -79,8 +79,9 @@ export class LotteryPredictionExecutor implements INodeExecutor {
       return 'Region is required';
     }
     
-    if (!['NORTH', 'CENTRAL', 'SOUTH'].includes(region)) {
-      return 'Region must be NORTH, CENTRAL, or SOUTH';
+    const validRegions = ['NORTH', 'CENTRAL', 'SOUTH', 'mien-bac', 'mien-trung', 'mien-nam'];
+    if (!validRegions.includes(region)) {
+      return 'Region must be NORTH/mien-bac, CENTRAL/mien-trung, or SOUTH/mien-nam';
     }
     
     return true;

@@ -104,6 +104,66 @@ app.post('/workflows', async (c) => {
 });
 
 /**
+ * PUT /engine/workflows/:id
+ * Update existing workflow
+ */
+app.put('/workflows/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const existingWorkflow = workflows.get(id);
+
+    if (!existingWorkflow) {
+      return c.json({ error: 'Workflow not found' }, 404);
+    }
+
+    const body = await c.req.json();
+    
+    const workflow: Workflow = {
+      ...existingWorkflow,
+      name: body.name || existingWorkflow.name,
+      description: body.description !== undefined ? body.description : existingWorkflow.description,
+      nodes: body.nodes || existingWorkflow.nodes,
+      connections: body.connections || existingWorkflow.connections,
+      triggers: body.triggers || existingWorkflow.triggers,
+      settings: body.settings || existingWorkflow.settings,
+      active: body.active !== undefined ? body.active : existingWorkflow.active,
+      updatedAt: new Date(),
+    };
+
+    workflows.set(workflow.id, workflow);
+
+    // Re-schedule if workflow has cron triggers and is active
+    if (workflow.active) {
+      const hasCronTrigger = workflow.triggers.some(t => t.type === 'schedule' && t.config.cron);
+      if (hasCronTrigger) {
+        try {
+          await scheduler.unschedule(id);
+          await scheduler.schedule(workflow);
+        } catch (error) {
+          console.error('Failed to reschedule workflow:', error);
+        }
+      }
+    } else {
+      // Unschedule if deactivated
+      try {
+        await scheduler.unschedule(id);
+      } catch (error) {
+        console.error('Failed to unschedule workflow:', error);
+      }
+    }
+
+    return c.json({
+      message: 'Workflow updated successfully',
+      workflow,
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to update workflow: ${errorMessage}` }, 400);
+  }
+});
+
+/**
  * POST /engine/workflows/:id/execute
  * Execute workflow manually
  */
