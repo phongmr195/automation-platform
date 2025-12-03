@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
-// Load .env.local first (your actual API keys), then fallback to .env (template)
-dotenv.config({ path: '.env.local' });
+// Load .env first (main config)
 dotenv.config();
 
 import { Hono } from "hono";
