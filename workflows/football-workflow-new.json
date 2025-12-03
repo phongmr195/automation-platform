@@ -1,0 +1,57 @@
+{
+  "id": "football_daily_notification",
+  "name": "Football Results Daily Notification",
+  "description": "Fetch yesterday's football results and send to Telegram",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Fetch Football Results",
+      "type": "action",
+      "position": { "x": 100, "y": 100 },
+      "data": {
+        "service": "football-results",
+        "operation": "fetch",
+        "parameters": {
+          "operation": "yesterday"
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Send to Telegram",
+      "type": "action",
+      "position": { "x": 400, "y": 100 },
+      "data": {
+        "service": "telegram-send",
+        "operation": "send",
+        "parameters": {
+          "message": "⚽ <b>KẾT QUẢ BÓNG ĐÁ HÔM QUA</b>\n\n{{node-1.results}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-1",
+      "source": "node-1",
+      "target": "node-2"
+    }
+  ],
+  "triggers": [
+    {
+      "type": "schedule",
+      "config": {
+        "cron": "0 7 * * *",
+        "timezone": "Asia/Ho_Chi_Minh"
+      }
+    }
+  ],
+  "settings": {
+    "timezone": "Asia/Ho_Chi_Minh",
+    "timeout": 60000,
+    "retryOnError": true,
+    "maxRetries": 3,
+    "retryDelay": 5000
+  },
+  "active": true
+}

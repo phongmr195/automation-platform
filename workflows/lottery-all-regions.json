@@ -1,0 +1,122 @@
+{
+  "id": "lottery_all_regions",
+  "name": "Lottery Predictions - All Regions",
+  "description": "Predict lottery for all 3 regions and send combined results to Telegram",
+  "nodes": [
+    {
+      "id": "predict-north",
+      "name": "Predict NORTH",
+      "type": "action",
+      "position": { "x": 100, "y": 100 },
+      "data": {
+        "service": "lottery-prediction",
+        "operation": "predict",
+        "parameters": {
+          "region": "NORTH",
+          "provider": "groq",
+          "useAI": true
+        }
+      }
+    },
+    {
+      "id": "predict-central",
+      "name": "Predict CENTRAL",
+      "type": "action",
+      "position": { "x": 100, "y": 250 },
+      "data": {
+        "service": "lottery-prediction",
+        "operation": "predict",
+        "parameters": {
+          "region": "CENTRAL",
+          "provider": "groq",
+          "useAI": true
+        }
+      }
+    },
+    {
+      "id": "predict-south",
+      "name": "Predict SOUTH",
+      "type": "action",
+      "position": { "x": 100, "y": 400 },
+      "data": {
+        "service": "lottery-prediction",
+        "operation": "predict",
+          "parameters": {
+          "region": "SOUTH",
+          "provider": "groq",
+          "useAI": true
+        }
+      }
+    },
+    {
+      "id": "format-message",
+      "name": "Format Message",
+      "type": "transform",
+      "position": { "x": 400, "y": 250 },
+      "data": {
+        "service": "transform",
+        "operation": "format",
+        "parameters": {
+          "operation": "format",
+          "template": "🎰 <b>DỰ ĐOÁN XỔ SỐ 3 MIỀN</b>\n\n🔵 <b>MIỀN BẮC</b>\n{{predict-north.prediction}}\n\n🟡 <b>MIỀN TRUNG</b>\n{{predict-central.prediction}}\n\n🔴 <b>MIỀN NAM</b>\n{{predict-south.prediction}}\n\n⏰ Thời gian: {{now}}"
+        }
+      }
+    },
+    {
+      "id": "send-telegram",
+      "name": "Send to Telegram",
+      "type": "action",
+      "position": { "x": 700, "y": 250 },
+      "data": {
+        "service": "telegram-send",
+        "operation": "send",
+        "parameters": {
+          "message": "{{format-message}}"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-1",
+      "source": "predict-north",
+      "target": "format-message"
+    },
+    {
+      "id": "conn-2",
+      "source": "predict-central",
+      "target": "format-message"
+    },
+    {
+      "id": "conn-3",
+      "source": "predict-south",
+      "target": "format-message"
+    },
+    {
+      "id": "conn-4",
+      "source": "format-message",
+      "target": "send-telegram"
+    }
+  ],
+  "triggers": [
+    {
+      "type": "schedule",
+      "config": {
+        "cron": "30 17 * * *",
+        "timezone": "Asia/Ho_Chi_Minh"
+      }
+    },
+    {
+      "type": "webhook",
+      "config": {}
+    }
+  ],
+  "settings": {
+    "timezone": "Asia/Ho_Chi_Minh",
+    "timeout": 120000,
+    "retryOnError": true,
+    "maxRetries": 2,
+    "retryDelay": 5000
+  },
+  "active": true
+}
