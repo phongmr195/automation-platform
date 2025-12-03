@@ -22,6 +22,8 @@ model User {
   sessions    Session[]
   workflows   Workflow[]
   credentials Credential[]
+  organizationMembers OrganizationMember[]
+  auditLogs   AuditLog[]
 }
 
 model Session {
@@ -36,6 +38,69 @@ model Session {
 }
 
 // -------------------------------------------------------
+// ORGANIZATION & MULTI-TENANCY
+// -------------------------------------------------------
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  workflows   Workflow[]
+  credentials Credential[]
+  auditLogs   AuditLog[]
+
+  @@index([slug])
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           Role         @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action         String        // e.g., "workflow.created", "member.invited"
+  resourceType   String        // e.g., "workflow", "member", "credential"
+  resourceId     String?
+  metadata       Json?         // Additional context
+  ipAddress      String?
+  userAgent      String?
+  
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// -------------------------------------------------------
 // WORKFLOW
 // -------------------------------------------------------
 model Workflow {
@@ -43,6 +108,10 @@ model Workflow {
   name        String
   description String?
   active      Boolean  @default(false)
+  
+  // Multi-tenancy
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
   // Owner
   ownerId     String?
@@ -67,6 +136,9 @@ model Workflow {
   versions WorkflowVersion[]
 
   executions Execution[]
+
+  @@index([organizationId])
+  @@index([ownerId])
 }
 
 // -------------------------------------------------------
@@ -134,6 +206,11 @@ model Credential {
   id        String   @id @default(cuid())
   ownerId   String   // user id
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  // Multi-tenancy
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
   name      String
   provider  String   // e.g., "openai", "google", "slack", "http"
   type      String   // "apiKey" | "oauth" | "basic"
@@ -144,4 +221,5 @@ model Credential {
   updatedAt DateTime @updatedAt
 
   @@index([ownerId])
+  @@index([organizationId])
 }

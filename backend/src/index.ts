@@ -21,6 +21,7 @@ import { lotteryRoutes } from "./routes/lottery";
 import { footballRoutes } from "./routes/football";
 import workflowEngineRoutes from "./routes/workflowEngine";
 import authRoutes from "./routes/auth";
+import organizationRoutes from "./routes/organizations";
 import { ExecutionWebSocketServer } from "./websocket";
 
 // Import workflow engine to auto-register nodes
@@ -46,6 +47,7 @@ const executionQueue = new Queue("executions", { connection: redis });
 
 // Register routes
 app.route("/auth", authRoutes);
+app.route("/organizations", organizationRoutes);
 app.route("/workflows", workflowRoutes({ prisma, executionQueue }));
 app.route("/workflow-version", workflowVersioning);
 app.route("/credentials", credentialRoute);

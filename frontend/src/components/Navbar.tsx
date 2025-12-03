@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { OrganizationSelector } from './OrganizationSelector';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -28,6 +29,9 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
+                {/* Organization Selector */}
+                <OrganizationSelector />
+
                 {/* User Info */}
                 <div className="hidden md:flex items-center space-x-2 text-sm text-gray-700">
                   <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
