@@ -9,6 +9,7 @@ export type Region = 'NORTH' | 'CENTRAL' | 'SOUTH';
 export interface LotteryPrediction {
   region: Region;
   date: Date;
+  loDacBiet: string[]; // Lô đặc biệt - 2 số đuôi giải đặc biệt (1 số duy nhất)
   bachThuLo: string[]; // Bạch thủ lô - 1 number
   lo3So: string[]; // Lô 3 số - 2 numbers
   loXien2: string[][]; // Xiên 2 - 6 pairs
@@ -57,6 +58,7 @@ export class LotteryPredictor {
     return {
       region,
       date,
+      loDacBiet: aiPrediction.loDacBiet,
       bachThuLo: aiPrediction.bachThuLo,
       lo3So: aiPrediction.lo3So,
       loXien2: aiPrediction.loXien2,
@@ -80,6 +82,7 @@ export class LotteryPredictor {
       prediction: {
         region,
         date,
+        loDacBiet: consensus.loDacBiet,
         bachThuLo: consensus.bachThuLo,
         lo3So: consensus.lo3So,
         loXien2: consensus.loXien2,
@@ -102,15 +105,22 @@ export class LotteryPredictor {
     const frequencies = this.calculateFrequencies(historicalData);
     
     // Generate predictions based on patterns
+    const loDacBiet = this.predictLoDacBiet(frequencies, 1);
     const bachThuLo = this.predictBachThuLo(frequencies, 1);
     const lo3So = this.predictLo3So(frequencies, 2);
-    const loXien2 = this.predictXien(bachThuLo, 2, 6);
-    const xien3 = this.predictXien(bachThuLo, 3, 3);
-    const xien4 = this.predictXien(bachThuLo, 4, 1);
+    
+    // Combine all numbers for xiên combinations
+    const allNumbers = [...loDacBiet, ...bachThuLo, ...lo3So.flatMap(n => n.slice(-2))];
+    const uniqueNumbers = [...new Set(allNumbers)];
+    
+    const loXien2 = this.predictXien(uniqueNumbers, 2, 6);
+    const xien3 = this.predictXien(uniqueNumbers, 3, 3);
+    const xien4 = this.predictXien(uniqueNumbers, 4, 1);
     
     return {
       region,
       date,
+      loDacBiet,
       bachThuLo,
       lo3So,
       loXien2,
@@ -142,6 +152,24 @@ export class LotteryPredictor {
     return freq;
   }
   
+  private predictLoDacBiet(frequencies: Map<string, number>, count: number): string[] {
+    // Predict last 2 digits of special prize (lô đặc biệt)
+    const sorted = Array.from(frequencies.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, count * 3);
+    
+    const predictions: string[] = [];
+    for (let i = 0; i < count; i++) {
+      if (Math.random() > 0.3 && sorted[i]) {
+        predictions.push(sorted[i][0]);
+      } else {
+        predictions.push(String(Math.floor(Math.random() * 100)).padStart(2, '0'));
+      }
+    }
+    
+    return [...new Set(predictions)].slice(0, count);
+  }
+
   private predictBachThuLo(frequencies: Map<string, number>, count: number): string[] {
     // Sort by frequency and get top numbers
     const sorted = Array.from(frequencies.entries())

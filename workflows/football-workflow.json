@@ -1,0 +1,68 @@
+{
+  "name": "Football Results Daily Notification",
+  "description": "Automatically fetch and send football results to Telegram at 7am daily",
+  "definition": {
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "http",
+        "name": "Fetch Football Results",
+        "position": { "x": 100, "y": 100 },
+        "data": {},
+        "config": {
+          "method": "GET",
+          "url": "http://localhost:3000/football/results/yesterday",
+          "headers": {}
+        }
+      },
+      {
+        "id": "node-2",
+        "type": "transform",
+        "name": "Format Message",
+        "position": { "x": 350, "y": 100 },
+        "data": {},
+        "config": {
+          "code": "const footballService = require('../services/footballService');\nconst service = new footballService.FootballService();\nconst message = service.formatResultsMessage(previousOutput);\nreturn message;"
+        }
+      },
+      {
+        "id": "node-3",
+        "type": "http",
+        "name": "Send to Telegram",
+        "position": { "x": 600, "y": 100 },
+        "data": {},
+        "config": {
+          "method": "POST",
+          "url": "https://api.telegram.org/bot{{env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "chat_id": "{{env.TELEGRAM_CHAT_ID}}",
+            "text": "{{previousOutput}}",
+            "parse_mode": "HTML"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-1",
+        "source": "node-1",
+        "target": "node-2",
+        "label": ""
+      },
+      {
+        "id": "edge-2",
+        "source": "node-2",
+        "target": "node-3",
+        "label": ""
+      }
+    ]
+  },
+  "schedule": {
+    "cron": "0 7 * * *",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "description": "Run daily at 7:00 AM Vietnam time"
+  }
+}

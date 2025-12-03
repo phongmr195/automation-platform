@@ -23,6 +23,7 @@ export interface LotteryHistoricalData {
 export interface AIPrediction {
   provider: AIProvider;
   region: string;
+  loDacBiet: string[]; // 2 số đuôi giải đặc biệt
   bachThuLo: string[];
   lo3So: string[];
   loXien2: string[][];
@@ -92,14 +93,16 @@ NGUYÊN TẮC DỰ ĐOÁN QUAN TRỌNG:
 - Đảm bảo các số phân tán đều trong khoảng 00-99
 
 YÊU CẦU DỰ ĐOÁN:
-1. Bạch thủ lô (1 số 2 chữ số duy nhất có khả năng cao nhất): String (1 number)
-2. Lô 3 số (2 số 3 chữ số KHÁC NHAU): Array of 2 numbers  
-3. Xiên 2 (6 cặp số KHÁC NHAU): Array of 6 pairs [num1, num2]
-4. Xiên 3 (3 bộ 3 số KHÁC NHAU): Array of 3 triplets [num1, num2, num3]
-5. Xiên 4 (1 bộ 4 số): Array of 1 quadruplet [num1, num2, num3, num4]
+1. Lô đặc biệt (1 số 2 chữ số - dự đoán 2 số cuối của giải đặc biệt): Array of 1 number (00-99)
+2. Bạch thủ lô (1 số 2 chữ số duy nhất có khả năng cao nhất): Array of 1 number
+3. Lô 3 số (2 số 3 chữ số KHÁC NHAU): Array of 2 numbers  
+4. Xiên 2 (6 cặp số KHÁC NHAU): Array of 6 pairs [num1, num2]
+5. Xiên 3 (3 bộ 3 số KHÁC NHAU): Array of 3 triplets [num1, num2, num3]
+6. Xiên 4 (1 bộ 4 số): Array of 1 quadruplet [num1, num2, num3, num4]
 
 VÍ DỤ SỐ TỐT (phân tán, ngẫu nhiên):
-- Bạch thủ lô: ["07"]
+- Lô đặc biệt: ["07"]
+- Bạch thủ lô: ["27"]
 - Lô 3 số: ["127", "348"]
 
 VÍ DỤ SỐ TỒI (TRÁNH):
@@ -115,6 +118,7 @@ PHƯƠNG PHÁP PHÂN TÍCH:
 
 QUAN TRỌNG: Trả lời CHÍNH XÁC theo format JSON sau, KHÔNG thêm text hay giải thích nào khác:
 {
+  "loDacBiet": ["58"],
   "bachThuLo": ["07"],
   "lo3So": ["127", "348"],
   "loXien2": [["07", "23"], ["07", "45"], ["23", "45"], ["45", "68"], ["23", "68"], ["07", "68"]],
@@ -153,6 +157,7 @@ QUAN TRỌNG: Trả lời CHÍNH XÁC theo format JSON sau, KHÔNG thêm text ha
     return {
       provider: 'claude',
       region,
+      loDacBiet: parsed.loDacBiet || [],
       bachThuLo: parsed.bachThuLo,
       lo3So: parsed.lo3So,
       loXien2: parsed.loXien2,
@@ -190,6 +195,7 @@ QUAN TRỌNG: Trả lời CHÍNH XÁC theo format JSON sau, KHÔNG thêm text ha
     return {
       provider: 'gpt',
       region,
+      loDacBiet: parsed.loDacBiet || [],
       bachThuLo: parsed.bachThuLo,
       lo3So: parsed.lo3So,
       loXien2: parsed.loXien2,
@@ -228,6 +234,7 @@ QUAN TRỌNG: Trả lời CHÍNH XÁC theo format JSON sau, KHÔNG thêm text ha
     return {
       provider: 'gemini',
       region,
+      loDacBiet: parsed.loDacBiet || [],
       bachThuLo: parsed.bachThuLo,
       lo3So: parsed.lo3So,
       loXien2: parsed.loXien2,
@@ -265,6 +272,7 @@ QUAN TRỌNG: Trả lời CHÍNH XÁC theo format JSON sau, KHÔNG thêm text ha
     return {
       provider: 'groq',
       region,
+      loDacBiet: parsed.loDacBiet || [],
       bachThuLo: parsed.bachThuLo,
       lo3So: parsed.lo3So,
       loXien2: parsed.loXien2,
@@ -393,9 +401,21 @@ QUAN TRỌNG: Trả lời CHÍNH XÁC theo format JSON sau, KHÔNG thêm text ha
 
     const avgConfidence = predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length;
 
+    // Get loDacBiet from predictions (take most common values)
+    const allLoDacBiet = predictions.flatMap(p => p.loDacBiet);
+    const loDacBietCounts = new Map<string, number>();
+    allLoDacBiet.forEach(num => {
+      loDacBietCounts.set(num, (loDacBietCounts.get(num) || 0) + 1);
+    });
+    const loDacBiet = Array.from(loDacBietCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 1)
+      .map(([num]) => num);
+
     return {
       provider: 'claude', // Default to Claude for consensus
       region,
+      loDacBiet,
       bachThuLo,
       lo3So,
       loXien2,

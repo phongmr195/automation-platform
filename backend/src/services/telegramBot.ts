@@ -51,6 +51,9 @@ export class TelegramBot {
 📅 Ngày: ${dateStr}
 📊 Độ tin cậy: ${prediction.confidence.toFixed(1)}%
 
+<b>🎁 LÔ ĐẶC BIỆT (2 số cuối giải ĐB):</b>
+${prediction.loDacBiet.join(', ')}
+
 <b>🎯 BẠCH THỦ LÔ:</b>
 ${prediction.bachThuLo.join(', ')}
 
@@ -79,5 +82,35 @@ ${prediction.xien4.map(x => x.join('-')).join(', ')}
       chat_id: this.chatId,
       text: '✅ Telegram bot đã kết nối thành công!\n🎰 Hệ thống dự đoán xổ số đã sẵn sàng.',
     });
+  }
+
+  /**
+   * Send a generic message to Telegram
+   */
+  async sendMessage(message: string): Promise<void> {
+    if (!this.botToken || !this.chatId) {
+      console.log('Skipping Telegram notification - not configured');
+      return;
+    }
+
+    try {
+      await axios.post(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+        chat_id: this.chatId,
+        text: message,
+        parse_mode: 'HTML',
+      });
+
+      console.log('✅ Message sent to Telegram');
+    } catch (error: any) {
+      console.error('Failed to send Telegram message:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if Telegram is configured
+   */
+  isConfigured(): boolean {
+    return !!(this.botToken && this.chatId);
   }
 }

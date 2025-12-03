@@ -18,6 +18,7 @@ import { workflowRoutes } from "./routes/workflows";
 import { workflowVersioning } from "./routes/workflowVersioning";
 import { credentialRoute } from "./routes/credentials";
 import { lotteryRoutes } from "./routes/lottery";
+import { footballRoutes } from "./routes/football";
 
 const app = new Hono();
 
@@ -32,6 +33,7 @@ app.route("/workflows", workflowRoutes({ prisma, executionQueue }));
 app.route("/workflow-version", workflowVersioning);
 app.route("/credentials", credentialRoute);
 app.route("/lottery", lotteryRoutes({ prisma, executionQueue }));
+app.route("/football", footballRoutes({ prisma, executionQueue }));
 
 // Health check
 app.get("/", (c) => c.text("Automation Platform API"));
