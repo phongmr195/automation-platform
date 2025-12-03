@@ -1,5 +1,7 @@
 import { Save, Play } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useParams } from 'react-router-dom';
+import { useEffect } from 'react';
 import { workflowApi } from '../services/api';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { toast } from '../utils/alerts';
@@ -8,7 +10,23 @@ import WorkflowCanvas from './WorkflowCanvas';
 import NodeConfigPanel from './NodeConfigPanel';
 
 export default function WorkflowEditor() {
-  const { workflow, nodes, connections, updateMetadata } = useWorkflowStore();
+  const { id } = useParams();
+  const { workflow, nodes, connections, updateMetadata, setWorkflow, clear } = useWorkflowStore();
+
+  // Load workflow if editing existing one
+  const { data: existingWorkflow } = useQuery({
+    queryKey: ['workflow', id],
+    queryFn: () => workflowApi.getWorkflow(id!),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (existingWorkflow) {
+      setWorkflow(existingWorkflow);
+    } else if (!id) {
+      clear();
+    }
+  }, [existingWorkflow, id, setWorkflow, clear]);
 
   const saveWorkflowMutation = useMutation({
     mutationFn: async () => {
