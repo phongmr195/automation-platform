@@ -3,8 +3,12 @@ import IORedis from "ioredis";
 import dotenv from "dotenv";
 import { runWorkflowExecution } from "./engine";
 import { runLotteryPrediction } from "./jobs/lotteryPredictionJob";
+import { executionEventEmitter } from "./events";
 
 dotenv.config();
+
+// Initialize Redis connection for events
+executionEventEmitter.initRedis(process.env.REDIS_URL);
 
 const connection = new IORedis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
@@ -31,4 +35,6 @@ worker.on("failed", (job, err) => {
   console.error(`[worker] execution ${job?.id} failed`, err?.message);
 });
 
-console.log(`Worker Engine v2 ready (concurrency=${concurrency}) - supports workflow & lottery prediction`);
+console.log(
+  `Worker Engine v2 ready (concurrency=${concurrency}) - supports workflow & lottery prediction`
+);

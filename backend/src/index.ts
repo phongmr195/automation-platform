@@ -19,6 +19,7 @@ import { credentialRoute } from "./routes/credentials";
 import { lotteryRoutes } from "./routes/lottery";
 import { footballRoutes } from "./routes/football";
 import workflowEngineRoutes from "./routes/workflowEngine";
+import { ExecutionWebSocketServer } from "./websocket";
 
 // Import workflow engine to auto-register nodes
 import "./workflow/index";
@@ -42,9 +43,38 @@ app.route("/engine", workflowEngineRoutes);
 // Health check
 app.get("/", (c) => c.text("Automation Platform API"));
 
-serve({
+// WebSocket stats endpoint
+app.get("/ws/stats", (c) => {
+  if (wsServer) {
+    return c.json(wsServer.getStats());
+  }
+  return c.json({ error: "WebSocket server not initialized" }, 503);
+});
+
+const server = serve({
   fetch: app.fetch,
   port: Number(process.env.PORT || 3000),
 });
 
+// Initialize WebSocket server
+const wsServer = new ExecutionWebSocketServer(server);
+
 console.log("Backend running on port", process.env.PORT || 3000);
+console.log(
+  "WebSocket server running on ws://localhost:" +
+    (process.env.PORT || 3000) +
+    "/ws"
+);
+
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM signal received: closing HTTP and WebSocket servers");
+  await wsServer.close();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("SIGINT signal received: closing HTTP and WebSocket servers");
+  await wsServer.close();
+  process.exit(0);
+});

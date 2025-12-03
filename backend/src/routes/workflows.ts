@@ -74,12 +74,86 @@ export const workflowRoutes = (opts: {
     }
   );
 
-  // LIST WORKFLOWS
+  // LIST WORKFLOWS with Search, Filter, Sort, and Pagination
   router.get("/", async (c) => {
-    const list = await prisma.workflow.findMany({
-      orderBy: { createdAt: "desc" },
+    // Get query parameters
+    const search = c.req.query("search") || "";
+    const status = c.req.query("status") || ""; // all, published, draft
+    const sort = c.req.query("sort") || "createdAt";
+    const order = c.req.query("order") || "desc";
+    const page = Number.parseInt(c.req.query("page") || "1");
+    const limit = Number.parseInt(c.req.query("limit") || "20");
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: Prisma.WorkflowWhereInput = {};
+
+    // Search by name (case-insensitive)
+    if (search) {
+      where.name = {
+        contains: search,
+        mode: "insensitive",
+      };
+    }
+
+    // Filter by status
+    if (status === "published") {
+      where.versions = {
+        some: {
+          isDraft: false,
+        },
+      };
+    } else if (status === "draft") {
+      where.versions = {
+        every: {
+          isDraft: true,
+        },
+      };
+    }
+
+    // Get total count for pagination
+    const total = await prisma.workflow.count({ where });
+
+    // Build orderBy clause
+    const orderBy: Prisma.WorkflowOrderByWithRelationInput = {};
+    if (sort === "createdAt" || sort === "updatedAt" || sort === "name") {
+      orderBy[sort] = order === "asc" ? "asc" : "desc";
+    } else {
+      orderBy.createdAt = "desc"; // default
+    }
+
+    // Fetch workflows with relations and counts
+    const workflows = await prisma.workflow.findMany({
+      where,
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1, // Only get latest version
+        },
+        _count: {
+          select: {
+            versions: true,
+            executions: true,
+          },
+        },
+      },
+      orderBy,
+      skip,
+      take: limit,
     });
-    return c.json(list);
+
+    // Return with pagination metadata
+    return c.json({
+      workflows,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   });
 
   // GET WORKFLOW

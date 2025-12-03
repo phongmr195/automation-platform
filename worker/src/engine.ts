@@ -1,6 +1,15 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import axios from "axios";
 import { NodeVM } from "vm2";
+import {
+  executionEventEmitter,
+  emitExecutionStarted,
+  emitExecutionCompleted,
+  emitNodeExecuting,
+  emitNodeCompleted,
+  emitExecutionLog,
+  emitExecutionProgress,
+} from "./events";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: PrismaClient;
@@ -28,6 +37,14 @@ export async function runWorkflowExecution(executionId: string) {
   });
 
   if (!execution) throw new Error("Execution not found");
+
+  // Emit execution started event
+  emitExecutionStarted(executionId, execution.workflowId);
+  emitExecutionLog(
+    executionId,
+    "info",
+    `Execution started for workflow ${execution.workflowId}`
+  );
 
   const definition = (execution.definitionSnapshot ??
     execution.version?.definition) as any;
@@ -88,17 +105,36 @@ export async function runWorkflowExecution(executionId: string) {
     const timeout = node.config?.timeout ?? DEFAULT_TIMEOUT;
     const errorPolicy = node.config?.onError ?? "stop";
 
+    // Emit node executing event
+    emitNodeExecuting(executionId, node.id, node.name || node.type, node.type);
+
     while (attempts > 0) {
       try {
         await log(node.id, "running", {});
         const result = await withTimeout(executeNode(node), timeout);
         await log(node.id, "success", result ?? {});
+
+        // Emit node completed event
+        emitNodeCompleted(
+          executionId,
+          node.id,
+          node.name || node.type,
+          "success",
+          result
+        );
+
         return result;
       } catch (err: any) {
         attempts -= 1;
 
         if (attempts > 0 && errorPolicy === "retry") {
           await log(node.id, "retry", { error: err.message });
+          emitExecutionLog(
+            executionId,
+            "warn",
+            `Retrying node ${node.id}: ${err.message}`,
+            node.id
+          );
           await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempts)));
           continue;
         }
@@ -106,15 +142,39 @@ export async function runWorkflowExecution(executionId: string) {
         if (errorPolicy === "fallback") {
           const fallback = node.config?.fallback ?? {};
           await log(node.id, "fallback", fallback);
+          emitNodeCompleted(
+            executionId,
+            node.id,
+            node.name || node.type,
+            "success",
+            fallback
+          );
           return fallback;
         }
 
         if (errorPolicy === "continue") {
           await log(node.id, "continue-after-error", {});
+          emitNodeCompleted(
+            executionId,
+            node.id,
+            node.name || node.type,
+            "skipped"
+          );
           return {};
         }
 
         await log(node.id, "error", { message: err.message });
+
+        // Emit node failed event
+        emitNodeCompleted(
+          executionId,
+          node.id,
+          node.name || node.type,
+          "failed",
+          undefined,
+          err.message
+        );
+
         throw err;
       }
     }
@@ -191,9 +251,12 @@ export async function runWorkflowExecution(executionId: string) {
   async function runGraph() {
     const queue = nodes.filter((n: any) => parentCount[n.id] === 0);
     const nodeMap = new Map(nodes.map((n: any) => [n.id, n]));
+    const totalNodes = nodes.length;
 
     while (queue.length > 0) {
-      const node = queue.shift() as any;
+      const node = queue.shift();
+      if (!node) continue;
+
       const output = await runNode(node);
 
       // Store node output in context for later reference
@@ -203,6 +266,9 @@ export async function runWorkflowExecution(executionId: string) {
       // Also merge output into context root for backwards compatibility
       Object.assign(context, output);
       processedNodes += 1;
+
+      // Emit progress update
+      emitExecutionProgress(executionId, processedNodes, totalNodes);
 
       for (const child of childrenMap[node.id] ?? []) {
         parentCount[child] -= 1;
@@ -217,7 +283,10 @@ export async function runWorkflowExecution(executionId: string) {
           where: { id: executionId },
           select: { status: true },
         });
-        if (check?.status === "aborted") return;
+        if (check?.status === "aborted") {
+          emitExecutionLog(executionId, "warn", "Execution aborted by user");
+          return;
+        }
       }
     }
   }
@@ -239,6 +308,10 @@ export async function runWorkflowExecution(executionId: string) {
         finishedAt: new Date(),
       },
     });
+
+    // Emit execution completed event
+    emitExecutionCompleted(executionId, "completed");
+    emitExecutionLog(executionId, "info", "Execution completed successfully");
   } catch (err: any) {
     await flushLogs();
     await prisma.execution.update({
@@ -249,6 +322,11 @@ export async function runWorkflowExecution(executionId: string) {
         finishedAt: new Date(),
       },
     });
+
+    // Emit execution failed event
+    emitExecutionCompleted(executionId, "failed", err?.message);
+    emitExecutionLog(executionId, "error", `Execution failed: ${err?.message}`);
+
     throw err;
   }
 }

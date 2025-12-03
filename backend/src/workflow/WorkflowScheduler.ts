@@ -3,9 +3,9 @@
  * Schedule workflows with cron triggers using BullMQ
  */
 
-import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
-import type { Workflow } from '../types';
+import { Queue } from "bullmq";
+import IORedis from "ioredis";
+import type { Workflow } from "./types";
 
 export class WorkflowScheduler {
   private queue: Queue;
@@ -13,12 +13,15 @@ export class WorkflowScheduler {
   private scheduledWorkflows: Map<string, string> = new Map(); // workflowId -> repeatableJobKey
 
   constructor(redisUrl?: string) {
-    this.connection = new IORedis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379', {
-      maxRetriesPerRequest: null,
-    });
-    
-    this.queue = new Queue('workflow-executions', { 
-      connection: this.connection 
+    this.connection = new IORedis(
+      redisUrl || process.env.REDIS_URL || "redis://localhost:6379",
+      {
+        maxRetriesPerRequest: null,
+      }
+    );
+
+    this.queue = new Queue("workflow-executions", {
+      connection: this.connection,
     });
   }
 
@@ -27,8 +30,10 @@ export class WorkflowScheduler {
    */
   async schedule(workflow: Workflow): Promise<void> {
     // Find cron triggers
-    const cronTriggers = workflow.triggers.filter(t => t.type === 'schedule' && t.config.cron);
-    
+    const cronTriggers = workflow.triggers.filter(
+      (t) => t.type === "schedule" && t.config.cron
+    );
+
     if (cronTriggers.length === 0) {
       console.log(`⏭️  No cron triggers found for workflow: ${workflow.name}`);
       return;
@@ -37,7 +42,7 @@ export class WorkflowScheduler {
     for (const trigger of cronTriggers) {
       const jobName = `workflow-${workflow.id}`;
       const cronPattern = trigger.config.cron;
-      const timezone = trigger.config.timezone || 'UTC';
+      const timezone = trigger.config.timezone || "UTC";
 
       try {
         // Add repeatable job to BullMQ
@@ -47,7 +52,7 @@ export class WorkflowScheduler {
             workflowId: workflow.id,
             workflowName: workflow.name,
             trigger: {
-              type: 'schedule',
+              type: "schedule",
               cron: cronPattern,
               timezone,
             },
@@ -58,13 +63,13 @@ export class WorkflowScheduler {
               tz: timezone,
             },
             removeOnComplete: 50, // Keep last 50 completed jobs
-            removeOnFail: 100,    // Keep last 100 failed jobs
+            removeOnFail: 100, // Keep last 100 failed jobs
           }
         );
 
         // Store the repeatable job key
         const repeatableJobs = await this.queue.getRepeatableJobs();
-        const job = repeatableJobs.find(j => j.name === jobName);
+        const job = repeatableJobs.find((j) => j.name === jobName);
         if (job) {
           this.scheduledWorkflows.set(workflow.id, job.key);
         }
@@ -73,9 +78,11 @@ export class WorkflowScheduler {
         console.log(`   Pattern: ${cronPattern}`);
         console.log(`   Timezone: ${timezone}`);
         console.log(`   Next run: ${this.getNextRun(cronPattern, timezone)}`);
-
       } catch (error) {
-        console.error(`❌ Failed to schedule workflow ${workflow.name}:`, error);
+        console.error(
+          `❌ Failed to schedule workflow ${workflow.name}:`,
+          error
+        );
         throw error;
       }
     }
@@ -86,7 +93,7 @@ export class WorkflowScheduler {
    */
   async unschedule(workflowId: string): Promise<void> {
     const jobKey = this.scheduledWorkflows.get(workflowId);
-    
+
     if (!jobKey) {
       console.log(`⏭️  Workflow ${workflowId} is not scheduled`);
       return;
@@ -115,11 +122,11 @@ export class WorkflowScheduler {
    */
   async getScheduledWorkflows(): Promise<any[]> {
     const repeatableJobs = await this.queue.getRepeatableJobs();
-    
+
     return repeatableJobs
-      .filter(job => job.name?.startsWith('workflow-'))
-      .map(job => ({
-        workflowId: job.name?.replace('workflow-', ''),
+      .filter((job) => job.name?.startsWith("workflow-"))
+      .map((job) => ({
+        workflowId: job.name?.replace("workflow-", ""),
         pattern: job.pattern,
         timezone: job.tz,
         nextRun: new Date(job.next),
@@ -132,15 +139,15 @@ export class WorkflowScheduler {
    */
   async clearAll(): Promise<void> {
     const repeatableJobs = await this.queue.getRepeatableJobs();
-    
+
     for (const job of repeatableJobs) {
-      if (job.name?.startsWith('workflow-')) {
+      if (job.name?.startsWith("workflow-")) {
         await this.queue.removeRepeatableByKey(job.key);
       }
     }
-    
+
     this.scheduledWorkflows.clear();
-    console.log('✅ Cleared all scheduled workflows');
+    console.log("✅ Cleared all scheduled workflows");
   }
 
   /**
@@ -149,9 +156,9 @@ export class WorkflowScheduler {
   private getNextRun(pattern: string, timezone: string): string {
     try {
       // Simple estimation - in production use cron-parser library
-      return 'Next run will be calculated by BullMQ';
+      return "Next run will be calculated by BullMQ";
     } catch (error) {
-      return 'Unknown';
+      return "Unknown";
     }
   }
 

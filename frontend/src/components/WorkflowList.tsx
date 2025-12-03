@@ -1,34 +1,71 @@
-import { useQuery } from '@tanstack/react-query';
-import { workflowApi } from '../services/api';
-import { Play, Edit, Copy, Trash2, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useConfirmDialog } from './ui/ConfirmDialog';
-import { toast } from '../utils/alerts';
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { workflowApi } from "../services/api";
+import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useConfirmDialog } from "./ui/ConfirmDialog";
+import { toast } from "../utils/alerts";
+import { SearchBar } from "./WorkflowList/SearchBar";
+import { FilterPanel } from "./WorkflowList/FilterPanel";
+import { Pagination } from "./WorkflowList/Pagination";
+import { WorkflowCard } from "./WorkflowList/WorkflowCard";
 
 export default function WorkflowList() {
   const navigate = useNavigate();
   const { confirm } = useConfirmDialog();
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['workflows'],
-    queryFn: workflowApi.getWorkflows,
+  // Search and filter state
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"all" | "PUBLISHED" | "DRAFT">("all");
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | "name">(
+    "updatedAt"
+  );
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const limit = 12;
+
+  // Build query parameters
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    sort: sortBy,
+    order,
   });
+
+  if (search) queryParams.append("search", search);
+  if (status !== "all") queryParams.append("status", status);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["workflows", queryParams.toString()],
+    queryFn: async () => {
+      const response = await fetch(
+        `http://localhost:3000/workflows?${queryParams}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch workflows");
+      return response.json();
+    },
+  });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, sortBy, order]);
 
   const handleDelete = async (id: string, name: string) => {
     const confirmed = await confirm({
-      title: 'Xóa workflow?',
+      title: "Xóa workflow?",
       description: `Bạn có chắc muốn xóa workflow "${name}"? Hành động này không thể hoàn tác.`,
-      confirmText: 'Xóa',
-      cancelText: 'Hủy',
+      confirmText: "Xóa",
+      cancelText: "Hủy",
     });
 
     if (confirmed) {
       try {
         await workflowApi.deleteWorkflow(id);
-        toast.success('Workflow đã được xóa');
+        toast.success("Workflow đã được xóa");
         refetch();
       } catch (error) {
-        toast.error('Lỗi khi xóa workflow: ' + String(error));
+        toast.error("Lỗi khi xóa workflow: " + String(error));
       }
     }
   };
@@ -38,32 +75,7 @@ export default function WorkflowList() {
       await workflowApi.executeWorkflow(id);
       toast.success(`Workflow "${name}" đang chạy`);
     } catch (error) {
-      toast.error('Lỗi khi chạy workflow: ' + String(error));
-    }
-  };
-
-  const handleClone = async (id: string, name: string) => {
-    const confirmed = await confirm({
-      title: 'Nhân bản workflow?',
-      description: `Tạo bản sao của workflow "${name}"?`,
-      confirmText: 'Nhân bản',
-      cancelText: 'Hủy',
-    });
-
-    if (confirmed) {
-      try {
-        const workflow = await workflowApi.getWorkflow(id);
-        await workflowApi.createWorkflow({
-          ...workflow,
-          id: undefined,
-          name: `${workflow.name} (Copy)`,
-          active: false,
-        });
-        toast.success('Workflow đã được nhân bản');
-        refetch();
-      } catch (error) {
-        toast.error('Lỗi khi nhân bản workflow: ' + String(error));
-      }
+      toast.error("Lỗi khi chạy workflow: " + String(error));
     }
   };
 
@@ -76,6 +88,12 @@ export default function WorkflowList() {
   }
 
   const workflows = data?.workflows || [];
+  const pagination = data?.pagination || {
+    total: 0,
+    page: 1,
+    limit: 12,
+    totalPages: 1,
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -90,12 +108,31 @@ export default function WorkflowList() {
               </p>
             </div>
             <button
-              onClick={() => navigate('/editor')}
+              onClick={() => navigate("/editor")}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
               New Workflow
             </button>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="mt-6 flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <SearchBar onSearch={setSearch} />
+            </div>
+            <FilterPanel
+              filters={{
+                status: status,
+                sort: sortBy,
+                order: order,
+              }}
+              onFilterChange={(newFilters) => {
+                setStatus(newFilters.status as any);
+                setSortBy(newFilters.sort as any);
+                setOrder(newFilters.order);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -119,103 +156,50 @@ export default function WorkflowList() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No workflows yet</h3>
-            <p className="text-gray-500 mb-4">Get started by creating your first workflow</p>
-            <button
-              onClick={() => navigate('/editor')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Create Workflow
-            </button>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {search || status !== "all"
+                ? "No workflows found"
+                : "No workflows yet"}
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {search || status !== "all"
+                ? "Try adjusting your search or filters"
+                : "Get started by creating your first workflow"}
+            </p>
+            {!search && status === "all" && (
+              <button
+                onClick={() => navigate("/editor")}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Create Workflow
+              </button>
+            )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nodes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Updated
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {workflows.map((workflow: any) => (
-                  <tr key={workflow.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{workflow.name}</div>
-                        {workflow.description && (
-                          <div className="text-sm text-gray-500">{workflow.description}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          workflow.active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {workflow.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {workflow.nodeCount} nodes
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(workflow.updatedAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleRun(workflow.id, workflow.name)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded transition-colors"
-                          title="Run workflow"
-                        >
-                          <Play className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/editor/${workflow.id}`)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit workflow"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleClone(workflow.id, workflow.name)}
-                          className="p-2 text-gray-600 hover:bg-gray-50 rounded transition-colors"
-                          title="Clone workflow"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(workflow.id, workflow.name)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete workflow"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Grid of workflow cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {workflows.map((workflow: any) => (
+                <WorkflowCard
+                  key={workflow.id}
+                  workflow={workflow}
+                  onEdit={(id) => navigate(`/editor/${id}`)}
+                  onDelete={(id) => handleDelete(id, workflow.name)}
+                  onExecute={(id) => handleRun(id, workflow.name)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={setPage}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
