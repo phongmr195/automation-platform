@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || 'AIzaSyBLc9nqvwrWXm7F41QtZty_q57tj00b0Hs');
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || 'google-api-key');
 
 async function test() {
   try {

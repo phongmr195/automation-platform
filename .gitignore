@@ -2,8 +2,14 @@ node_modules/
 dist/
 .env
 .env.local
+.env.*.local
 *.log
 .DS_Store
 .vscode/
 .idea/
 pgdata/
+
+# Security: Never commit these files
+backend/.env.local
+backend/.env.development.local
+backend/.env.production.local
