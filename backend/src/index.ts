@@ -15,6 +15,7 @@ import IORedis from "ioredis";
 import { workflowRoutes } from "./routes/workflows";
 import { workflowVersioning } from "./routes/workflowVersioning";
 import { credentialRoute } from "./routes/credentials";
+import { lotteryRoutes } from "./routes/lottery";
 
 const app = new Hono();
 
@@ -28,9 +29,10 @@ const executionQueue = new Queue("executions", { connection: redis });
 app.route("/workflows", workflowRoutes({ prisma, executionQueue }));
 app.route("/workflow-version", workflowVersioning);
 app.route("/credentials", credentialRoute);
+app.route("/lottery", lotteryRoutes({ prisma, executionQueue }));
 
 // Health check
-app.get("/", (c) => c.text("Backend OK"));
+app.get("/", (c) => c.text("Automation Platform API"));
 
 serve({
   fetch: app.fetch,

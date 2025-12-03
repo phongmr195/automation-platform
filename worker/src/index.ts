@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 import IORedis from "ioredis";
 import dotenv from "dotenv";
 import { runWorkflowExecution } from "./engine";
+import { runLotteryPrediction } from "./jobs/lotteryPredictionJob";
 
 dotenv.config();
 
@@ -15,6 +16,8 @@ const worker = new Worker(
   async (job) => {
     if (job.name === "execute-workflow") {
       await runWorkflowExecution(job.data.executionId);
+    } else if (job.name === "lottery-prediction") {
+      await runLotteryPrediction(job.data);
     }
   },
   { connection, concurrency }
@@ -28,4 +31,4 @@ worker.on("failed", (job, err) => {
   console.error(`[worker] execution ${job?.id} failed`, err?.message);
 });
 
-console.log(`Worker Engine v2 ready (concurrency=${concurrency})`);
+console.log(`Worker Engine v2 ready (concurrency=${concurrency}) - supports workflow & lottery prediction`);

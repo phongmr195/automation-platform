@@ -13,14 +13,18 @@
     "prisma:migrate": "prisma migrate dev --name init"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "@google/generative-ai": "^0.24.1",
     "@hono/node-server": "^1.9.6",
     "@hono/zod-validator": "^0.7.5",
     "@prisma/client": "^6.19.0",
     "axios": "^1.13.2",
     "bullmq": "^2.0.0",
     "dotenv": "^16.0.0",
+    "groq-sdk": "^0.37.0",
     "hono": "^4.0.0",
     "ioredis": "^5.0.0",
+    "openai": "^6.9.1",
     "pg": "^8.0.0",
     "zod": "^4.1.13"
   },
