@@ -236,13 +236,11 @@ export const DRAW_SCHEDULES = {
     predictionOffset: 45, // minutes before
   },
   CENTRAL: {
-    time: '17:15', // 5:15 PM Wed, Sat, Sun
-    days: [3, 6, 0], // Wed, Sat, Sun
+    time: '17:15', // 5:15 PM daily
     predictionOffset: 45,
   },
   SOUTH: {
-    time: '16:15', // 4:15 PM Mon, Tue, Thu, Fri, Sat
-    days: [1, 2, 4, 5, 6],
+    time: '16:15', // 4:15 PM daily
     predictionOffset: 45,
   },
 };
