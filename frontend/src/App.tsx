@@ -4,6 +4,12 @@ import { Toaster } from 'sonner';
 import WorkflowEditor from './components/WorkflowEditor';
 import WorkflowList from './components/WorkflowList';
 import { ConfirmDialogProvider } from './components/ui/ConfirmDialog';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,16 +23,53 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfirmDialogProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<WorkflowList />} />
-            <Route path="/editor" element={<WorkflowEditor />} />
-            <Route path="/editor/:id" element={<WorkflowEditor />} />
-          </Routes>
-        </BrowserRouter>
-        <Toaster position="top-right" richColors />
-      </ConfirmDialogProvider>
+      <AuthProvider>
+        <ConfirmDialogProvider>
+          <BrowserRouter>
+            <Navbar />
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              {/* Protected Routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/workflows"
+                element={
+                  <ProtectedRoute>
+                    <WorkflowList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/editor"
+                element={
+                  <ProtectedRoute>
+                    <WorkflowEditor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/editor/:id"
+                element={
+                  <ProtectedRoute>
+                    <WorkflowEditor />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+          <Toaster position="top-right" richColors />
+        </ConfirmDialogProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { PrismaClient } from "@prisma/client";
 
@@ -19,12 +20,23 @@ import { credentialRoute } from "./routes/credentials";
 import { lotteryRoutes } from "./routes/lottery";
 import { footballRoutes } from "./routes/football";
 import workflowEngineRoutes from "./routes/workflowEngine";
+import authRoutes from "./routes/auth";
 import { ExecutionWebSocketServer } from "./websocket";
 
 // Import workflow engine to auto-register nodes
 import "./workflow/index";
 
 const app = new Hono();
+
+// Enable CORS for frontend
+app.use('/*', cors({
+  origin: (origin) => origin, // Allow all origins in development
+  credentials: true,
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600,
+}));
 
 // Redis connection
 const redis = new IORedis(process.env.REDIS_URL, {
@@ -33,6 +45,7 @@ const redis = new IORedis(process.env.REDIS_URL, {
 const executionQueue = new Queue("executions", { connection: redis });
 
 // Register routes
+app.route("/auth", authRoutes);
 app.route("/workflows", workflowRoutes({ prisma, executionQueue }));
 app.route("/workflow-version", workflowVersioning);
 app.route("/credentials", credentialRoute);
@@ -56,8 +69,8 @@ const server = serve({
   port: Number(process.env.PORT || 3000),
 });
 
-// Initialize WebSocket server
-const wsServer = new ExecutionWebSocketServer(server);
+// Initialize WebSocket server (cast to HTTP Server type)
+const wsServer = new ExecutionWebSocketServer(server as any);
 
 console.log("Backend running on port", process.env.PORT || 3000);
 console.log(

@@ -39,8 +39,8 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
       <div className="workflow-card-header">
         <div className="workflow-card-title">
           <h3>{workflow.name}</h3>
-          <span className={`status-badge ${workflow.status.toLowerCase()}`}>
-            {workflow.status}
+          <span className={`status-badge ${workflow.status?.toLowerCase() || 'draft'}`}>
+            {workflow.status || 'Draft'}
           </span>
         </div>
         {workflow.description && (

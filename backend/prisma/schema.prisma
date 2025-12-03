@@ -8,6 +8,34 @@ generator client {
 }
 
 // -------------------------------------------------------
+// AUTHENTICATION & USERS
+// -------------------------------------------------------
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // bcrypt hashed
+  name      String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions    Session[]
+  workflows   Workflow[]
+  credentials Credential[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+// -------------------------------------------------------
 // WORKFLOW
 // -------------------------------------------------------
 model Workflow {
@@ -15,6 +43,10 @@ model Workflow {
   name        String
   description String?
   active      Boolean  @default(false)
+  
+  // Owner
+  ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   
   // Workflow definition (nodes, connections)
   nodes       Json     @default("[]")
@@ -100,13 +132,14 @@ model NodeLog {
 
 model Credential {
   id        String   @id @default(cuid())
-  ownerId   String // workspace/user id (tùy implementation)
+  ownerId   String   // user id
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
-  provider  String // e.g., "openai", "google", "slack", "http"
-  type      String // "apiKey" | "oauth" | "basic"
-  encrypted Bytes // ciphertext
+  provider  String   // e.g., "openai", "google", "slack", "http"
+  type      String   // "apiKey" | "oauth" | "basic"
+  encrypted Bytes    // ciphertext
   iv        Bytes
-  meta      Json? // e.g. { scopes: [...], expiresAt: '...' }
+  meta      Json?    // e.g. { scopes: [...], expiresAt: '...' }
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
