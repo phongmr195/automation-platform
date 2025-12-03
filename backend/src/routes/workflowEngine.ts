@@ -1,67 +1,71 @@
 /**
  * Workflow Engine API Routes
- * REST endpoints for in-memory workflow execution
+ * REST endpoints for database-persisted workflow execution
  */
 
 import { Hono } from 'hono';
 import { workflowExecutor } from '../workflow/WorkflowExecutor';
 import { nodeRegistry } from '../workflow/NodeRegistry';
 import { getWorkflowScheduler } from '../workflow/WorkflowScheduler';
+import { workflowService } from '../services/workflowService';
 import type { Workflow } from '../workflow/types';
 
 const app = new Hono();
 const scheduler = getWorkflowScheduler();
 
-// In-memory storage for workflows (TODO: move to database)
-const workflows = new Map<string, Workflow>();
-const executions = new Map<string, any>();
-
 /**
  * GET /engine/workflows
- * List all in-memory workflows
+ * List all workflows from database
  */
-app.get('/workflows', (c) => {
-  const workflowList = Array.from(workflows.values()).map(w => ({
-    id: w.id,
-    name: w.name,
-    description: w.description,
-    active: w.active,
-    nodeCount: w.nodes.length,
-    createdAt: w.createdAt,
-    updatedAt: w.updatedAt,
-  }));
+app.get('/workflows', async (c) => {
+  try {
+    const workflowList = await workflowService.getAllWorkflows();
 
-  return c.json({
-    workflows: workflowList,
-    total: workflowList.length,
-  });
+    return c.json({
+      workflows: workflowList,
+      total: workflowList.length,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to fetch workflows: ${errorMessage}` }, 500);
+  }
 });
 
 /**
  * GET /engine/workflows/:id
- * Get workflow by ID
+ * Get workflow by ID from database
  */
-app.get('/workflows/:id', (c) => {
-  const id = c.req.param('id');
-  const workflow = workflows.get(id);
+app.get('/workflows/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const workflow = await workflowService.getWorkflowById(id);
 
-  if (!workflow) {
-    return c.json({ error: 'Workflow not found' }, 404);
+    if (!workflow) {
+      return c.json({ error: 'Workflow not found' }, 404);
+    }
+
+    return c.json(workflow);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to fetch workflow: ${errorMessage}` }, 500);
   }
-
-  return c.json(workflow);
 });
 
 /**
  * POST /engine/workflows
- * Create new in-memory workflow
+ * Create new workflow in database
  */
 app.post('/workflows', async (c) => {
   try {
     const body = await c.req.json();
     
-    const workflow: Workflow = {
-      id: body.id || `wf_${Date.now()}`,
+    // Validate workflow
+    if (!body.name) {
+      return c.json({ error: 'Workflow name is required' }, 400);
+    }
+
+    const workflow = await workflowService.createWorkflow({
+      id: body.id,
       name: body.name,
       description: body.description,
       nodes: body.nodes || [],
@@ -69,16 +73,7 @@ app.post('/workflows', async (c) => {
       triggers: body.triggers || [],
       settings: body.settings || {},
       active: body.active !== undefined ? body.active : false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // Validate workflow
-    if (!workflow.name) {
-      return c.json({ error: 'Workflow name is required' }, 400);
-    }
-
-    workflows.set(workflow.id, workflow);
+    });
 
     // Schedule if workflow has cron triggers and is active
     if (workflow.active) {
@@ -105,32 +100,22 @@ app.post('/workflows', async (c) => {
 
 /**
  * PUT /engine/workflows/:id
- * Update existing workflow
+ * Update existing workflow in database
  */
 app.put('/workflows/:id', async (c) => {
   try {
     const id = c.req.param('id');
-    const existingWorkflow = workflows.get(id);
-
-    if (!existingWorkflow) {
-      return c.json({ error: 'Workflow not found' }, 404);
-    }
-
     const body = await c.req.json();
-    
-    const workflow: Workflow = {
-      ...existingWorkflow,
-      name: body.name || existingWorkflow.name,
-      description: body.description !== undefined ? body.description : existingWorkflow.description,
-      nodes: body.nodes || existingWorkflow.nodes,
-      connections: body.connections || existingWorkflow.connections,
-      triggers: body.triggers || existingWorkflow.triggers,
-      settings: body.settings || existingWorkflow.settings,
-      active: body.active !== undefined ? body.active : existingWorkflow.active,
-      updatedAt: new Date(),
-    };
 
-    workflows.set(workflow.id, workflow);
+    const workflow = await workflowService.updateWorkflow(id, {
+      name: body.name,
+      description: body.description,
+      nodes: body.nodes,
+      connections: body.connections,
+      triggers: body.triggers,
+      settings: body.settings,
+      active: body.active,
+    });
 
     // Re-schedule if workflow has cron triggers and is active
     if (workflow.active) {
@@ -170,7 +155,7 @@ app.put('/workflows/:id', async (c) => {
 app.post('/workflows/:id/execute', async (c) => {
   try {
     const id = c.req.param('id');
-    const workflow = workflows.get(id);
+    const workflow = await workflowService.getWorkflowById(id);
 
     if (!workflow) {
       return c.json({ error: 'Workflow not found' }, 404);
@@ -180,11 +165,16 @@ app.post('/workflows/:id/execute', async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const triggerData = body.triggerData;
 
+    // Create execution record
+    const execution = await workflowService.createExecution({
+      workflowId: id,
+      status: 'running',
+      input: triggerData,
+      definitionSnapshot: { nodes: workflow.nodes, connections: workflow.connections },
+    });
+
     // Execute workflow
     const result = await workflowExecutor.execute(workflow, triggerData);
-
-    // Store execution result
-    executions.set(result.executionId, result);
 
     // Convert Map to object for JSON
     const nodeResults: Record<string, any> = {};
@@ -192,10 +182,17 @@ app.post('/workflows/:id/execute', async (c) => {
       nodeResults[key] = value;
     });
 
+    // Update execution with result
+    await workflowService.updateExecution(execution.id, {
+      status: result.status,
+      error: result.error,
+      nodeResults,
+    });
+
     return c.json({
       message: 'Workflow executed',
       execution: {
-        executionId: result.executionId,
+        executionId: execution.id,
         workflowId: result.workflowId,
         status: result.status,
         startedAt: result.startedAt,
@@ -214,26 +211,22 @@ app.post('/workflows/:id/execute', async (c) => {
 
 /**
  * GET /engine/executions/:executionId
- * Get execution details
+ * Get execution details from database
  */
-app.get('/executions/:executionId', (c) => {
-  const executionId = c.req.param('executionId');
-  const execution = executions.get(executionId);
+app.get('/executions/:executionId', async (c) => {
+  try {
+    const executionId = c.req.param('executionId');
+    const execution = await workflowService.getExecutionById(executionId);
 
-  if (!execution) {
-    return c.json({ error: 'Execution not found' }, 404);
+    if (!execution) {
+      return c.json({ error: 'Execution not found' }, 404);
+    }
+
+    return c.json(execution);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to fetch execution: ${errorMessage}` }, 500);
   }
-
-  // Convert Map to object for JSON
-  const nodeResults: Record<string, any> = {};
-  execution.nodeResults.forEach((value: any, key: string) => {
-    nodeResults[key] = value;
-  });
-
-  return c.json({
-    ...execution,
-    nodeResults,
-  });
 });
 
 /**
@@ -258,27 +251,34 @@ app.get('/nodes', (c) => {
 
 /**
  * DELETE /engine/workflows/:id
- * Delete workflow
+ * Delete workflow from database
  */
 app.delete('/workflows/:id', async (c) => {
-  const id = c.req.param('id');
-  
-  if (!workflows.has(id)) {
-    return c.json({ error: 'Workflow not found' }, 404);
-  }
-
-  // Unschedule if scheduled
   try {
-    await scheduler.unschedule(id);
+    const id = c.req.param('id');
+    
+    // Check if workflow exists
+    const workflow = await workflowService.getWorkflowById(id);
+    if (!workflow) {
+      return c.json({ error: 'Workflow not found' }, 404);
+    }
+
+    // Unschedule if scheduled
+    try {
+      await scheduler.unschedule(id);
+    } catch (error) {
+      console.error('Failed to unschedule workflow:', error);
+    }
+
+    await workflowService.deleteWorkflow(id);
+
+    return c.json({
+      message: 'Workflow deleted successfully',
+    });
   } catch (error) {
-    console.error('Failed to unschedule workflow:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to delete workflow: ${errorMessage}` }, 500);
   }
-
-  workflows.delete(id);
-
-  return c.json({
-    message: 'Workflow deleted successfully',
-  });
 });
 
 /**
@@ -286,30 +286,28 @@ app.delete('/workflows/:id', async (c) => {
  * Activate workflow and schedule if has cron trigger
  */
 app.post('/workflows/:id/activate', async (c) => {
-  const id = c.req.param('id');
-  const workflow = workflows.get(id);
+  try {
+    const id = c.req.param('id');
+    const workflow = await workflowService.updateWorkflow(id, { active: true });
 
-  if (!workflow) {
-    return c.json({ error: 'Workflow not found' }, 404);
-  }
-
-  workflow.active = true;
-  workflow.updatedAt = new Date();
-
-  // Schedule if has cron trigger
-  const hasCronTrigger = workflow.triggers.some(t => t.type === 'schedule' && t.config.cron);
-  if (hasCronTrigger) {
-    try {
-      await scheduler.schedule(workflow);
-    } catch (error) {
-      return c.json({ error: `Failed to schedule workflow: ${error}` }, 500);
+    // Schedule if has cron trigger
+    const hasCronTrigger = workflow.triggers.some(t => t.type === 'schedule' && t.config.cron);
+    if (hasCronTrigger) {
+      try {
+        await scheduler.schedule(workflow);
+      } catch (error) {
+        return c.json({ error: `Failed to schedule workflow: ${error}` }, 500);
+      }
     }
-  }
 
-  return c.json({
-    message: 'Workflow activated',
-    workflow,
-  });
+    return c.json({
+      message: 'Workflow activated',
+      workflow,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to activate workflow: ${errorMessage}` }, 500);
+  }
 });
 
 /**
@@ -317,27 +315,25 @@ app.post('/workflows/:id/activate', async (c) => {
  * Deactivate workflow and unschedule
  */
 app.post('/workflows/:id/deactivate', async (c) => {
-  const id = c.req.param('id');
-  const workflow = workflows.get(id);
-
-  if (!workflow) {
-    return c.json({ error: 'Workflow not found' }, 404);
-  }
-
-  workflow.active = false;
-  workflow.updatedAt = new Date();
-
-  // Unschedule
   try {
-    await scheduler.unschedule(id);
-  } catch (error) {
-    console.error('Failed to unschedule workflow:', error);
-  }
+    const id = c.req.param('id');
+    const workflow = await workflowService.updateWorkflow(id, { active: false });
 
-  return c.json({
-    message: 'Workflow deactivated',
-    workflow,
-  });
+    // Unschedule
+    try {
+      await scheduler.unschedule(id);
+    } catch (error) {
+      console.error('Failed to unschedule workflow:', error);
+    }
+
+    return c.json({
+      message: 'Workflow deactivated',
+      workflow,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to deactivate workflow: ${errorMessage}` }, 500);
+  }
 });
 
 /**
@@ -359,34 +355,54 @@ app.get('/schedules', async (c) => {
  * Webhook trigger endpoint
  */
 app.post('/webhook/:workflowId', async (c) => {
-  const workflowId = c.req.param('workflowId');
-  const workflow = workflows.get(workflowId);
-
-  if (!workflow) {
-    return c.json({ error: 'Workflow not found' }, 404);
-  }
-
-  if (!workflow.active) {
-    return c.json({ error: 'Workflow is not active' }, 400);
-  }
-
-  // Check if workflow has webhook trigger
-  const hasWebhookTrigger = workflow.triggers.some(t => t.type === 'webhook');
-  if (!hasWebhookTrigger) {
-    return c.json({ error: 'Workflow does not have webhook trigger' }, 400);
-  }
-
-  // Get webhook data
-  const webhookData = await c.req.json().catch(() => ({}));
-
-  // Execute workflow
   try {
+    const workflowId = c.req.param('workflowId');
+    const workflow = await workflowService.getWorkflowById(workflowId);
+
+    if (!workflow) {
+      return c.json({ error: 'Workflow not found' }, 404);
+    }
+
+    if (!workflow.active) {
+      return c.json({ error: 'Workflow is not active' }, 400);
+    }
+
+    // Check if workflow has webhook trigger
+    const hasWebhookTrigger = workflow.triggers.some(t => t.type === 'webhook');
+    if (!hasWebhookTrigger) {
+      return c.json({ error: 'Workflow does not have webhook trigger' }, 400);
+    }
+
+    // Get webhook data
+    const webhookData = await c.req.json().catch(() => ({}));
+
+    // Create execution record
+    const execution = await workflowService.createExecution({
+      workflowId,
+      status: 'running',
+      input: webhookData,
+      definitionSnapshot: { nodes: workflow.nodes, connections: workflow.connections },
+    });
+
+    // Execute workflow
     const result = await workflowExecutor.execute(workflow, webhookData);
-    executions.set(result.executionId, result);
+
+    // Convert Map to object for JSON
+    const nodeResults: Record<string, any> = {};
+    result.nodeResults.forEach((value: any, key: string) => {
+      nodeResults[key] = value;
+    });
+
+    // Update execution
+    await workflowService.updateExecution(execution.id, {
+      status: result.status,
+      error: result.error,
+      nodeResults,
+    });
 
     return c.json({
       message: 'Workflow triggered via webhook',
-      executionId: result.executionId,
+      executionId: execution.id,
       status: result.status,
     });
   } catch (error) {

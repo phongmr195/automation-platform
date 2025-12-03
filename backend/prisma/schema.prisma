@@ -11,10 +11,21 @@ generator client {
 // WORKFLOW
 // -------------------------------------------------------
 model Workflow {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean  @default(false)
+  
+  // Workflow definition (nodes, connections)
+  nodes       Json     @default("[]")
+  connections Json     @default("[]")
+  
+  // Triggers & Settings
+  triggers    Json     @default("[]")
+  settings    Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Published version
   publishedVersionId String?          @unique
@@ -51,17 +62,18 @@ model WorkflowVersion {
 model Execution {
   id         String   @id @default(cuid())
   workflowId String
-  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
-  versionId String
-  version   WorkflowVersion @relation(fields: [versionId], references: [id])
+  versionId String?
+  version   WorkflowVersion? @relation(fields: [versionId], references: [id])
 
-  status String
-  input  Json?
-  output Json?
-  error  String?
+  status     String   // 'pending' | 'running' | 'success' | 'failed' | 'cancelled'
+  input      Json?
+  output     Json?
+  error      String?
+  nodeResults Json?   // Results from each node
   definitionSnapshot Json?
-  startedAt DateTime?
+  startedAt  DateTime?
   finishedAt DateTime?
 
   createdAt DateTime @default(now())
