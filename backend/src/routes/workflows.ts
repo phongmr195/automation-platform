@@ -107,11 +107,26 @@ export const workflowRoutes = (opts: {
       const body = c.req.valid("json");
       const normalized = normalizeWorkflow(body.definition);
 
+      // Get the latest version number
+      const latestVersion = await prisma.workflowVersion.findFirst({
+        where: { workflowId: id },
+        orderBy: { versionNumber: "desc" },
+      });
+
       const wf = await prisma.workflow.update({
         where: { id },
         data: {
           name: body.name,
-          definition: normalized,
+          versions: {
+            create: {
+              versionNumber: (latestVersion?.versionNumber ?? 0) + 1,
+              definition: normalized,
+              isDraft: true,
+            },
+          },
+        },
+        include: {
+          versions: true,
         },
       });
 

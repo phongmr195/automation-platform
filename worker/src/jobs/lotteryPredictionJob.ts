@@ -47,7 +47,7 @@ export function shouldRunToday(region: Region): boolean {
   const config = DRAW_SCHEDULES[region];
   const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
   
-  if (!config.days) {
+  if (!('days' in config)) {
     // NORTH runs daily
     return true;
   }
