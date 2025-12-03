@@ -1,12 +1,16 @@
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 // JWT secret keys - IMPORTANT: Move to environment variables in production
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET || 'your-access-token-secret-change-in-production';
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-token-secret-change-in-production';
+const ACCESS_TOKEN_SECRET =
+  process.env.JWT_ACCESS_SECRET ||
+  "your-access-token-secret-change-in-production";
+const REFRESH_TOKEN_SECRET =
+  process.env.JWT_REFRESH_SECRET ||
+  "your-refresh-token-secret-change-in-production";
 
 // Token expiration times
-const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
-const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
+const ACCESS_TOKEN_EXPIRY = "1h"; // 1 hour
+const REFRESH_TOKEN_EXPIRY = "7d"; // 7 days
 
 export interface TokenPayload {
   userId: string;
@@ -45,9 +49,9 @@ export function verifyAccessToken(token: string): JWTPayload | null {
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      console.log('Access token expired');
+      console.log("Access token expired");
     } else if (error instanceof jwt.JsonWebTokenError) {
-      console.log('Invalid access token');
+      console.log("Invalid access token");
     }
     return null;
   }
@@ -62,9 +66,9 @@ export function verifyRefreshToken(token: string): JWTPayload | null {
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      console.log('Refresh token expired');
+      console.log("Refresh token expired");
     } else if (error instanceof jwt.JsonWebTokenError) {
-      console.log('Invalid refresh token');
+      console.log("Invalid refresh token");
     }
     return null;
   }
