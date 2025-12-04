@@ -6,6 +6,8 @@ import { templateApi } from '../services/templateApi';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { TemplateReviews } from './TemplateReviews';
+import { TemplateComments } from './TemplateComments';
 import type { WorkflowTemplate } from '../types/workflow';
 
 interface TemplatePreviewProps {
@@ -21,6 +23,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onCl
   const [workflowName, setWorkflowName] = useState(template.name);
   const [workflowDescription, setWorkflowDescription] = useState(template.description);
   const [rating, setRating] = useState(0);
+  const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'discussion'>('overview');
 
   // Convert template nodes to ReactFlow format
   const reactFlowNodes = template.nodes.map((node) => ({
@@ -217,19 +220,72 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onCl
             </div>
           </div>
 
-          {/* Right Panel - Workflow Visualization */}
-          <div className="flex-1 bg-gray-50">
-            <div className="h-full">
-              <ReactFlow
-                nodes={reactFlowNodes}
-                edges={reactFlowEdges}
-                fitView
-                attributionPosition="bottom-left"
-              >
-                <Background />
-                <Controls />
-                <MiniMap />
-              </ReactFlow>
+          {/* Right Panel - Tabbed Content */}
+          <div className="flex-1 flex flex-col">
+            {/* Tabs */}
+            <div className="border-b border-gray-200 bg-white">
+              <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'overview'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Overview
+                </button>
+                <button
+                  onClick={() => setActiveTab('reviews')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'reviews'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Reviews
+                </button>
+                <button
+                  onClick={() => setActiveTab('discussion')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'discussion'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Discussion
+                </button>
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto bg-gray-50">
+              {activeTab === 'overview' && (
+                <div className="h-full">
+                  <ReactFlow
+                    nodes={reactFlowNodes}
+                    edges={reactFlowEdges}
+                    fitView
+                    attributionPosition="bottom-left"
+                  >
+                    <Background />
+                    <Controls />
+                    <MiniMap />
+                  </ReactFlow>
+                </div>
+              )}
+              
+              {activeTab === 'reviews' && (
+                <div className="p-6">
+                  <TemplateReviews templateId={template.id} />
+                </div>
+              )}
+              
+              {activeTab === 'discussion' && (
+                <div className="p-6">
+                  <TemplateComments templateId={template.id} />
+                </div>
+              )}
             </div>
           </div>
         </div>

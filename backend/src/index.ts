@@ -21,6 +21,8 @@ import { lotteryRoutes } from "./routes/lottery";
 import { footballRoutes } from "./routes/football";
 import workflowEngineRoutes from "./routes/workflowEngine";
 import templateRoutes from "./routes/templates";
+import marketplaceRoutes from "./routes/marketplace";
+import customNodesRoutes from "./routes/custom-nodes";
 import authRoutes from "./routes/auth";
 import oauthRoutes from "./routes/oauth";
 import organizationRoutes from "./routes/organizations";
@@ -58,6 +60,8 @@ app.route("/lottery", lotteryRoutes({ prisma, executionQueue }));
 app.route("/football", footballRoutes({ prisma, executionQueue }));
 app.route("/engine", workflowEngineRoutes);
 app.route("/templates", templateRoutes);
+app.route("/marketplace", marketplaceRoutes);
+app.route("/custom-nodes", customNodesRoutes);
 
 // Health check
 app.get("/", (c) => c.text("Automation Platform API"));

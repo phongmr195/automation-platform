@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "commander": "^14.0.2",
     "ws": "^8.18.3"
   },
   "devDependencies": {

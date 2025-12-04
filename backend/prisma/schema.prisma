@@ -31,6 +31,8 @@ model User {
   organizationMembers OrganizationMember[]
   auditLogs   AuditLog[]
   templates   WorkflowTemplate[]
+  templateReviews TemplateReview[]
+  templateComments TemplateComment[]
 }
 
 model Session {
@@ -60,6 +62,7 @@ model Organization {
   credentials Credential[]
   auditLogs   AuditLog[]
   folders     WorkflowFolder[]
+  customNodeInstalls CustomNodeInstall[]
 
   @@index([slug])
 }
@@ -301,8 +304,210 @@ model WorkflowTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Marketplace relations
+  reviews     TemplateReview[]
+  comments    TemplateComment[]
+
   @@index([category])
   @@index([featured])
   @@index([published])
   @@index([authorId])
+}
+
+// -------------------------------------------------------
+// TEMPLATE REVIEWS & RATINGS
+// -------------------------------------------------------
+model TemplateReview {
+  id         String   @id @default(cuid())
+  templateId String
+  template   WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  rating     Int      // 1-5 stars
+  title      String?  // Review title
+  content    String?  // Review text
+  
+  // Helpful votes
+  helpfulCount Int    @default(0)
+  
+  // Moderation
+  verified   Boolean  @default(false) // Verified purchase/usage
+  featured   Boolean  @default(false)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([templateId, userId]) // One review per user per template
+  @@index([templateId])
+  @@index([userId])
+  @@index([rating])
+}
+
+// -------------------------------------------------------
+// TEMPLATE COMMENTS
+// -------------------------------------------------------
+model TemplateComment {
+  id         String   @id @default(cuid())
+  templateId String
+  template   WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  content    String
+  
+  // Threading (replies)
+  parentId   String?
+  parent     TemplateComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    TemplateComment[] @relation("CommentReplies")
+  
+  // Engagement
+  upvotes    Int      @default(0)
+  
+  // Moderation
+  edited     Boolean  @default(false)
+  deleted    Boolean  @default(false)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([templateId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+// -------------------------------------------------------
+// CUSTOM NODES (Like n8n Community Nodes)
+// -------------------------------------------------------
+model CustomNode {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "my-custom-node"
+  displayName String   // e.g., "My Custom Node"
+  description String
+  author      String   // User ID or organization
+  authorName  String   // Display name
+  category    String   // e.g., "communication", "transform", "integration"
+  icon        String?  // Icon name or URL
+  iconUrl     String?
+  color       String?  // Hex color
+  
+  // Publishing status
+  status      String   @default("draft") // draft, published, deprecated
+  published   Boolean  @default(false)
+  featured    Boolean  @default(false)
+  verified    Boolean  @default(false) // Verified by platform
+  
+  // Metadata
+  repository  String?  // GitHub repo URL
+  homepage    String?  // Documentation URL
+  license     String?  // MIT, Apache-2.0, etc.
+  keywords    String[] // Search keywords
+  
+  // Stats
+  downloads   Int      @default(0)
+  installs    Int      @default(0)
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  publishedAt DateTime?
+  
+  // Relations
+  versions    CustomNodeVersion[]
+  installs_rel CustomNodeInstall[]
+  reviews     CustomNodeReview[]
+  
+  @@index([name])
+  @@index([category])
+  @@index([published])
+  @@index([featured])
+  @@index([downloads])
+  @@index([rating])
+}
+
+model CustomNodeVersion {
+  id          String   @id @default(cuid())
+  nodeId      String
+  version     String   // Semver: 1.0.0
+  changelog   String?
+  
+  // Node code
+  code        String   @db.Text // TypeScript/JavaScript code
+  compiled    String?  @db.Text // Compiled JavaScript (if needed)
+  sourceMap   String?  @db.Text // Source map for debugging
+  
+  // Dependencies
+  dependencies Json?   // NPM dependencies
+  
+  // Node definition (from SDK)
+  definition  Json     // ICustomNode interface fields
+  properties  Json     // NodeProperty[]
+  credentials Json?    // NodeCredential[]
+  documentation Json?  // NodeDocumentation
+  
+  // Validation
+  validated   Boolean  @default(false)
+  validationErrors String?
+  
+  // Stats
+  downloads   Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+  
+  node        CustomNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  
+  @@unique([nodeId, version])
+  @@index([nodeId])
+  @@index([version])
+}
+
+model CustomNodeInstall {
+  id             String   @id @default(cuid())
+  nodeId         String
+  version        String
+  organizationId String?
+  userId         String?
+  
+  // Installation status
+  active         Boolean  @default(true)
+  
+  installedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  node           CustomNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([nodeId, organizationId, userId])
+  @@index([nodeId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model CustomNodeReview {
+  id         String   @id @default(cuid())
+  nodeId     String
+  userId     String
+  version    String?  // Reviewed version
+  
+  rating     Int      // 1-5 stars
+  title      String?
+  content    String?
+  
+  helpful    Int      @default(0)
+  verified   Boolean  @default(false) // Verified purchase/install
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  node       CustomNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  
+  @@unique([nodeId, userId])
+  @@index([nodeId])
+  @@index([userId])
+  @@index([rating])
 }
