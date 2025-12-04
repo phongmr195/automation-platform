@@ -29,10 +29,18 @@ const LOG_BATCH_SIZE = 25;
 const ABORT_CHECK_INTERVAL = 5;
 
 export async function runWorkflowExecution(executionId: string) {
+  const startTime = Date.now();
+  
   const execution = await prisma.execution.findUnique({
     where: { id: executionId },
     include: {
       version: { select: { definition: true } },
+      workflow: { 
+        select: { 
+          id: true, 
+          organizationId: true 
+        } 
+      },
     },
   });
 
@@ -300,6 +308,8 @@ export async function runWorkflowExecution(executionId: string) {
     await runGraph();
     await flushLogs();
 
+    const duration = Date.now() - startTime;
+
     await prisma.execution.update({
       where: { id: executionId },
       data: {
@@ -309,11 +319,22 @@ export async function runWorkflowExecution(executionId: string) {
       },
     });
 
+    // Record execution metrics
+    await recordExecutionMetrics(
+      execution.workflow.id,
+      execution.workflow.organizationId,
+      'success',
+      duration
+    );
+
     // Emit execution completed event
     emitExecutionCompleted(executionId, "completed");
     emitExecutionLog(executionId, "info", "Execution completed successfully");
   } catch (err: any) {
     await flushLogs();
+    
+    const duration = Date.now() - startTime;
+
     await prisma.execution.update({
       where: { id: executionId },
       data: {
@@ -323,10 +344,47 @@ export async function runWorkflowExecution(executionId: string) {
       },
     });
 
+    // Record execution metrics
+    await recordExecutionMetrics(
+      execution.workflow.id,
+      execution.workflow.organizationId,
+      'failed',
+      duration
+    );
+
     // Emit execution failed event
     emitExecutionCompleted(executionId, "failed", err?.message);
     emitExecutionLog(executionId, "error", `Execution failed: ${err?.message}`);
 
     throw err;
+  }
+}
+
+/**
+ * Record execution metrics for analytics
+ */
+async function recordExecutionMetrics(
+  workflowId: string,
+  organizationId: string | null,
+  status: string,
+  duration: number
+) {
+  try {
+    // Call analytics service via HTTP (to avoid circular dependencies)
+    await axios.post(`http://localhost:${process.env.PORT || 3000}/analytics/record`, {
+      workflowId,
+      organizationId,
+      status,
+      duration,
+      resources: {
+        memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024, // MB
+        cpuUsage: process.cpuUsage().user / 1000000, // Convert to percentage approximation
+      },
+    }).catch(err => {
+      console.error('Failed to record execution metrics:', err.message);
+    });
+  } catch (error) {
+    // Don't fail the execution if metrics recording fails
+    console.error('Error recording metrics:', error);
   }
 }

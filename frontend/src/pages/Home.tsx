@@ -25,7 +25,7 @@ export default function Home() {
               View Workflows
             </Link>
             <Link
-              to="/workflows/new"
+              to="/editor"
               className="px-6 py-3 bg-white text-indigo-600 border-2 border-indigo-600 rounded-lg font-medium hover:bg-indigo-50 transition-colors"
             >
               Create New Workflow

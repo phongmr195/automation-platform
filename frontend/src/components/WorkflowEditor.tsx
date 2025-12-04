@@ -103,7 +103,7 @@ export default function WorkflowEditor() {
         <div className="flex-1">
           <input
             type="text"
-            value={workflow?.name || 'Untitled Workflow'}
+            value={workflow?.name || 'Build Workflow'}
             onChange={(e) => updateMetadata({ name: e.target.value })}
             className="text-xl font-semibold border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
           />

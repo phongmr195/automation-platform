@@ -153,6 +153,7 @@ model Workflow {
   versions WorkflowVersion[]
 
   executions Execution[]
+  metrics    WorkflowMetrics?
 
   @@index([organizationId])
   @@index([ownerId])
@@ -510,4 +511,157 @@ model CustomNodeReview {
   @@index([nodeId])
   @@index([userId])
   @@index([rating])
+}
+
+// -------------------------------------------------------
+// ANALYTICS & METRICS
+// -------------------------------------------------------
+model ExecutionMetrics {
+  id             String   @id @default(cuid())
+  
+  // Time period (daily aggregation)
+  date           DateTime @db.Date
+  hour           Int?     // Optional hour for hourly metrics
+  
+  // Scope
+  organizationId String?
+  workflowId     String?
+  
+  // Execution statistics
+  totalExecutions     Int @default(0)
+  successfulExecutions Int @default(0)
+  failedExecutions    Int @default(0)
+  cancelledExecutions Int @default(0)
+  
+  // Performance metrics
+  avgDuration    Float @default(0) // milliseconds
+  minDuration    Float @default(0)
+  maxDuration    Float @default(0)
+  p50Duration    Float @default(0) // median
+  p95Duration    Float @default(0)
+  p99Duration    Float @default(0)
+  
+  // Success rate
+  successRate    Float @default(0) // percentage
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([date, organizationId, workflowId, hour])
+  @@index([date])
+  @@index([organizationId])
+  @@index([workflowId])
+}
+
+model WorkflowMetrics {
+  id             String   @id @default(cuid())
+  workflowId     String   @unique
+  workflow       Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  // Execution counts
+  totalExecutions     Int @default(0)
+  successfulExecutions Int @default(0)
+  failedExecutions    Int @default(0)
+  
+  // Performance
+  avgDuration    Float @default(0) // milliseconds
+  lastDuration   Float @default(0)
+  fastestDuration Float @default(0)
+  slowestDuration Float @default(0)
+  
+  // Reliability
+  successRate    Float @default(0) // percentage
+  uptimeRate     Float @default(0) // percentage
+  
+  // Activity
+  lastExecutionAt DateTime?
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  
+  // Resource usage
+  avgMemoryUsage Float @default(0) // MB
+  avgCpuUsage    Float @default(0) // percentage
+  totalApiCalls  Int   @default(0)
+  totalDbQueries Int   @default(0)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([successRate])
+  @@index([avgDuration])
+  @@index([lastExecutionAt])
+}
+
+model ResourceUsage {
+  id             String   @id @default(cuid())
+  
+  // Time period
+  timestamp      DateTime @default(now())
+  date           DateTime @db.Date
+  hour           Int
+  
+  // Scope
+  organizationId String?
+  executionId    String?
+  
+  // System metrics
+  cpuUsage       Float @default(0) // percentage
+  memoryUsage    Float @default(0) // MB
+  diskUsage      Float @default(0) // MB
+  
+  // Network metrics
+  networkIn      Float @default(0) // MB
+  networkOut     Float @default(0) // MB
+  
+  // Application metrics
+  activeExecutions Int @default(0)
+  queuedExecutions Int @default(0)
+  apiCallCount     Int @default(0)
+  dbQueryCount     Int @default(0)
+  cacheHitRate     Float @default(0) // percentage
+  
+  createdAt      DateTime @default(now())
+  
+  @@unique([date, hour, organizationId, executionId])
+  @@index([timestamp])
+  @@index([organizationId])
+  @@index([executionId])
+}
+
+model CostTracking {
+  id             String   @id @default(cuid())
+  
+  // Time period
+  date           DateTime @db.Date
+  
+  // Scope
+  organizationId String?
+  workflowId     String?
+  
+  // API costs (external services)
+  apiCosts       Json?    // { "openai": 1.23, "stripe": 0.45, ... }
+  totalApiCost   Float @default(0)
+  
+  // Execution costs
+  executionCount Int   @default(0)
+  executionCost  Float @default(0) // Based on duration/resources
+  
+  // Storage costs
+  storageCost    Float @default(0)
+  
+  // Total cost
+  totalCost      Float @default(0)
+  
+  // Budget tracking
+  budgetLimit    Float?
+  budgetUsed     Float @default(0)
+  budgetRemaining Float?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([date, organizationId, workflowId])
+  @@index([date])
+  @@index([organizationId])
+  @@index([totalCost])
 }

@@ -1,14 +1,30 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { OrganizationSelector } from './OrganizationSelector';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const isActive = (path: string) => {
+    if (path === '/workflows') {
+      return location.pathname === '/workflows' || location.pathname.startsWith('/editor');
+    }
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
+
+  const getLinkClass = (path: string) => {
+    const baseClass = "px-3 py-2 rounded-md text-sm font-medium transition-colors";
+    if (isActive(path)) {
+      return `${baseClass} text-indigo-600 bg-indigo-50 font-semibold`;
+    }
+    return `${baseClass} text-gray-700 hover:text-gray-900 hover:bg-gray-100`;
   };
 
   return (
@@ -43,7 +59,7 @@ export default function Navbar() {
                 {/* Workflows Link */}
                 <Link
                   to="/workflows"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                  className={getLinkClass('/workflows')}
                 >
                   Workflows
                 </Link>
@@ -51,9 +67,17 @@ export default function Navbar() {
                 {/* Templates Link */}
                 <Link
                   to="/templates"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                  className={getLinkClass('/templates')}
                 >
                   Templates
+                </Link>
+
+                {/* Analytics Link */}
+                <Link
+                  to="/analytics"
+                  className={getLinkClass('/analytics')}
+                >
+                  Analytics
                 </Link>
 
                 {/* Logout Button */}
