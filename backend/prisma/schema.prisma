@@ -30,6 +30,7 @@ model User {
   credentials Credential[]
   organizationMembers OrganizationMember[]
   auditLogs   AuditLog[]
+  templates   WorkflowTemplate[]
 }
 
 model Session {
@@ -254,4 +255,54 @@ model Credential {
 
   @@index([ownerId])
   @@index([organizationId])
+}
+
+// -------------------------------------------------------
+// WORKFLOW TEMPLATES
+// -------------------------------------------------------
+model WorkflowTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // e.g., "marketing", "data-sync", "notifications", "etl", "api-integration", "social-media"
+  tags        String[] // Searchable tags
+  
+  // Template metadata
+  icon        String?  // Icon identifier or emoji
+  difficulty  String   @default("beginner") // "beginner" | "intermediate" | "advanced"
+  estimatedTime String?  // e.g., "5 minutes", "1 hour"
+  featured    Boolean  @default(false)
+  
+  // Template definition
+  nodes       Json     @default("[]")
+  connections Json     @default("[]")
+  triggers    Json     @default("[]")
+  settings    Json?
+  
+  // Configuration parameters that users need to fill
+  requiredParams Json?  // List of parameters users must configure
+  
+  // Version control
+  version     String   @default("1.0.0")
+  changelog   String?
+  
+  // Usage statistics
+  installCount Int     @default(0)
+  rating      Float?   @default(0)
+  
+  // Author info
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  
+  // Publishing
+  published   Boolean  @default(true)
+  publishedAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([featured])
+  @@index([published])
+  @@index([authorId])
 }

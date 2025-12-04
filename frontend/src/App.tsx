@@ -14,6 +14,7 @@ import Register from './pages/Register';
 import OAuthCallback from './pages/OAuthCallback';
 import { CreateOrganization } from './pages/CreateOrganization';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { TemplateGallery } from './pages/TemplateGallery';
 
 // Create QueryClient OUTSIDE component to prevent re-creation on every render
 const queryClient = new QueryClient({
@@ -57,6 +58,16 @@ export default function App() {
                       <ProtectedRoute>
                         <div className="flex-1 overflow-auto">
                           <WorkflowList />
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/templates"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-hidden">
+                          <TemplateGallery />
                         </div>
                       </ProtectedRoute>
                     }

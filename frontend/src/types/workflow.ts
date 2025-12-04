@@ -83,3 +83,29 @@ export interface ExecutionResult {
   nodeResults?: Record<string, unknown>;
   error?: string;
 }
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  tags: string[];
+  icon: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  estimatedTime: string;
+  featured: boolean;
+  nodes: WorkflowNode[];
+  connections: NodeConnection[];
+  triggers: WorkflowTrigger[];
+  settings?: WorkflowSettings;
+  requiredParams: Record<string, string[]>;
+  version: string;
+  changelog?: string;
+  installCount: number;
+  rating: number;
+  authorId?: string;
+  published: boolean;
+  publishedAt?: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
