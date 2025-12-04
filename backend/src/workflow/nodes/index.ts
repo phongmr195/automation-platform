@@ -35,6 +35,11 @@ import { RedisNode } from './RedisNode';
 import { AirtableNode } from './AirtableNode';
 import { FirebaseNode } from './FirebaseNode';
 
+// Productivity Nodes
+import { GoogleSheetsNode } from './GoogleSheetsNode';
+import { NotionNode } from './NotionNode';
+import { TrelloNode } from './TrelloNode';
+
 /**
  * Initialize and register all nodes
  */
@@ -589,6 +594,88 @@ export function registerAllNodes(): void {
     ],
   });
 
+  // Google Sheets Node
+  nodeRegistry.register({
+    type: 'google-sheets',
+    category: 'productivity',
+    name: 'Google Sheets',
+    description: 'Read and write data to Google Sheets using service account',
+    executor: GoogleSheetsNode,
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'Service account credentials (clientEmail, privateKey)' },
+      { name: 'spreadsheetId', type: 'string', required: true, description: 'Google Sheets spreadsheet ID' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'read', options: ['read', 'append', 'update', 'clear', 'batchUpdate', 'createSheet'] },
+      { name: 'range', type: 'string', required: false, description: 'Range in A1 notation (e.g., Sheet1!A1:D10)' },
+      { name: 'values', type: 'array', required: false, description: 'Values to write (2D array)' },
+      { name: 'sheetName', type: 'string', required: false, description: 'Sheet name for createSheet operation' },
+      { name: 'valueInputOption', type: 'string', required: false, description: 'How input data should be interpreted', default: 'USER_ENTERED', options: ['RAW', 'USER_ENTERED'] },
+      { name: 'requests', type: 'array', required: false, description: 'Batch update requests' },
+    ],
+    outputs: [
+      { name: 'values', type: 'array', description: 'Cell values' },
+      { name: 'updatedCells', type: 'number', description: 'Number of cells updated' },
+      { name: 'updatedRows', type: 'number', description: 'Number of rows updated' },
+      { name: 'sheetId', type: 'number', description: 'Created sheet ID' },
+    ],
+  });
+
+  // Notion Node
+  nodeRegistry.register({
+    type: 'notion',
+    category: 'productivity',
+    name: 'Notion',
+    description: 'Interact with Notion databases and pages',
+    executor: NotionNode,
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'Notion credentials (token)' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'queryDatabase', options: ['queryDatabase', 'createPage', 'updatePage', 'getPage', 'appendBlock', 'getBlocks', 'search'] },
+      { name: 'databaseId', type: 'string', required: false, description: 'Database ID' },
+      { name: 'pageId', type: 'string', required: false, description: 'Page ID' },
+      { name: 'blockId', type: 'string', required: false, description: 'Block ID' },
+      { name: 'properties', type: 'object', required: false, description: 'Page properties' },
+      { name: 'children', type: 'array', required: false, description: 'Block content' },
+      { name: 'filter', type: 'object', required: false, description: 'Query filter' },
+      { name: 'sorts', type: 'array', required: false, description: 'Query sorts' },
+      { name: 'query', type: 'string', required: false, description: 'Search query' },
+      { name: 'pageSize', type: 'number', required: false, description: 'Results per page' },
+    ],
+    outputs: [
+      { name: 'results', type: 'array', description: 'Query results' },
+      { name: 'page', type: 'object', description: 'Page object' },
+      { name: 'block', type: 'object', description: 'Block object' },
+    ],
+  });
+
+  // Trello Node
+  nodeRegistry.register({
+    type: 'trello',
+    category: 'productivity',
+    name: 'Trello',
+    description: 'Manage Trello boards, lists, and cards',
+    executor: TrelloNode,
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'Trello credentials (apiKey, token)' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'getBoard', options: ['getBoard', 'getLists', 'createList', 'getCards', 'createCard', 'updateCard', 'getCard', 'deleteCard', 'addComment', 'addChecklist'] },
+      { name: 'boardId', type: 'string', required: false, description: 'Board ID' },
+      { name: 'listId', type: 'string', required: false, description: 'List ID' },
+      { name: 'cardId', type: 'string', required: false, description: 'Card ID' },
+      { name: 'name', type: 'string', required: false, description: 'Name for create operations' },
+      { name: 'desc', type: 'string', required: false, description: 'Description' },
+      { name: 'pos', type: 'string', required: false, description: 'Position (top, bottom, or number)' },
+      { name: 'due', type: 'string', required: false, description: 'Due date (ISO 8601)' },
+      { name: 'text', type: 'string', required: false, description: 'Comment text' },
+    ],
+    outputs: [
+      { name: 'board', type: 'object', description: 'Board object' },
+      { name: 'lists', type: 'array', description: 'List objects' },
+      { name: 'list', type: 'object', description: 'List object' },
+      { name: 'cards', type: 'array', description: 'Card objects' },
+      { name: 'card', type: 'object', description: 'Card object' },
+      { name: 'comment', type: 'object', description: 'Comment object' },
+      { name: 'checklist', type: 'object', description: 'Checklist object' },
+    ],
+  });
+
   console.log(`\n📦 Registered ${nodeRegistry.getAllNodes().length} workflow nodes`);
 }
 
@@ -621,4 +708,8 @@ export {
   RedisNode,
   AirtableNode,
   FirebaseNode,
+  // Productivity Nodes
+  GoogleSheetsNode,
+  NotionNode,
+  TrelloNode,
 };

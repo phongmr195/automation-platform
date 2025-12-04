@@ -45,6 +45,23 @@ const DEFAULT_PARAMS: Record<string, Record<string, string>> = {
     table: '',
     query: '{}',
   },
+  // Productivity Nodes
+  'google-sheets': {
+    connection: '{}',
+    spreadsheetId: '',
+    operation: 'read',
+    range: 'Sheet1!A1:D10',
+  },
+  'notion': {
+    connection: '{}',
+    operation: 'queryDatabase',
+    databaseId: '',
+  },
+  'trello': {
+    connection: '{}',
+    operation: 'getBoard',
+    boardId: '',
+  },
 };
 
 export default function NodePalette() {

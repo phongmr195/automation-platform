@@ -12,6 +12,29 @@ const SUGGESTED_PARAMS: Record<string, string[]> = {
   'condition': ['operator', 'value', 'compareWith'],
   'loop': ['operation', 'items'],
   'database': ['operation', 'table', 'query'],
+  // Communication Nodes
+  'email': ['connection', 'to', 'subject', 'body', 'from'],
+  'slack': ['connection', 'channel', 'text', 'attachments'],
+  'discord': ['connection', 'content', 'embeds'],
+  'webhook': ['connection', 'url', 'method', 'headers', 'body'],
+  'sms': ['connection', 'to', 'message', 'from'],
+  // Cloud Storage Nodes
+  'google-drive': ['connection', 'operation', 'fileId', 'fileName', 'folderId'],
+  'dropbox': ['connection', 'operation', 'path', 'content'],
+  'aws-s3': ['connection', 'operation', 'bucket', 'key', 'body'],
+  'azure-blob': ['connection', 'operation', 'containerName', 'blobName', 'content'],
+  'onedrive': ['connection', 'operation', 'itemId', 'path', 'content'],
+  'box': ['connection', 'operation', 'fileId', 'folderId', 'name'],
+  // Database Nodes
+  'mysql': ['connection', 'operation', 'table', 'query', 'data'],
+  'mongodb': ['connection', 'operation', 'collection', 'filter', 'data'],
+  'redis': ['connection', 'operation', 'key', 'value', 'ttl'],
+  'airtable': ['connection', 'operation', 'baseId', 'tableId', 'recordId'],
+  'firebase': ['connection', 'operation', 'collection', 'documentId', 'data'],
+  // Productivity Nodes
+  'google-sheets': ['connection', 'spreadsheetId', 'operation', 'range', 'values'],
+  'notion': ['connection', 'operation', 'databaseId', 'pageId', 'properties'],
+  'trello': ['connection', 'operation', 'boardId', 'listId', 'cardId', 'name'],
 };
 
 // Parameter hints and placeholders
@@ -72,6 +95,119 @@ const PARAM_HINTS: Record<string, Record<string, { placeholder: string; hint: st
       hint: 'Ngày (YYYY-MM-DD), để trống = hôm nay' 
     },
   },
+  // Google Sheets
+  'google-sheets': {
+    connection: {
+      placeholder: '{"clientEmail": "...", "privateKey": "..."}',
+      hint: 'Service account credentials (JSON format)'
+    },
+    spreadsheetId: {
+      placeholder: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+      hint: 'Google Sheets spreadsheet ID (from URL)'
+    },
+    operation: {
+      placeholder: 'read, append, update, clear, batchUpdate, createSheet',
+      hint: 'Operation to perform on the spreadsheet'
+    },
+    range: {
+      placeholder: 'Sheet1!A1:D10',
+      hint: 'Range in A1 notation (e.g., Sheet1!A1:D10)'
+    },
+    values: {
+      placeholder: '[["Name", "Email"], ["John", "john@example.com"]]',
+      hint: '2D array of values to write'
+    },
+    sheetName: {
+      placeholder: 'NewSheet',
+      hint: 'Name for new sheet (createSheet operation)'
+    },
+  },
+  // Notion
+  'notion': {
+    connection: {
+      placeholder: '{"token": "secret_abc123..."}',
+      hint: 'Notion integration token'
+    },
+    operation: {
+      placeholder: 'queryDatabase, createPage, updatePage, getPage, appendBlock, search',
+      hint: 'Operation to perform'
+    },
+    databaseId: {
+      placeholder: 'abc123-def456-ghi789',
+      hint: 'Notion database ID'
+    },
+    pageId: {
+      placeholder: 'abc123-def456-ghi789',
+      hint: 'Notion page ID'
+    },
+    blockId: {
+      placeholder: 'abc123-def456-ghi789',
+      hint: 'Notion block ID'
+    },
+    properties: {
+      placeholder: '{"Name": {"title": [{"text": {"content": "New Page"}}]}}',
+      hint: 'Page properties (JSON format)'
+    },
+    filter: {
+      placeholder: '{"property": "Status", "select": {"equals": "Done"}}',
+      hint: 'Query filter (JSON format)'
+    },
+    query: {
+      placeholder: 'search text',
+      hint: 'Search query string'
+    },
+  },
+  // Trello
+  'trello': {
+    connection: {
+      placeholder: '{"apiKey": "...", "token": "..."}',
+      hint: 'Trello API key and token'
+    },
+    operation: {
+      placeholder: 'getBoard, getLists, createCard, updateCard, addComment',
+      hint: 'Operation to perform'
+    },
+    boardId: {
+      placeholder: 'abc123def456',
+      hint: 'Trello board ID'
+    },
+    listId: {
+      placeholder: 'abc123def456',
+      hint: 'Trello list ID'
+    },
+    cardId: {
+      placeholder: 'abc123def456',
+      hint: 'Trello card ID'
+    },
+    name: {
+      placeholder: 'Task name',
+      hint: 'Name for list/card'
+    },
+    desc: {
+      placeholder: 'Task description',
+      hint: 'Description for card'
+    },
+    text: {
+      placeholder: 'Comment text',
+      hint: 'Comment text for card'
+    },
+  },
+};
+
+// Operation options for nodes
+const OPERATION_OPTIONS: Record<string, string[]> = {
+  'google-sheets': ['read', 'append', 'update', 'clear', 'batchUpdate', 'createSheet'],
+  'notion': ['queryDatabase', 'createPage', 'updatePage', 'getPage', 'appendBlock', 'getBlocks', 'search'],
+  'trello': ['getBoard', 'getLists', 'createList', 'getCards', 'createCard', 'updateCard', 'getCard', 'deleteCard', 'addComment', 'addChecklist'],
+  'mysql': ['query', 'insert', 'update', 'delete', 'select'],
+  'mongodb': ['find', 'findOne', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany', 'aggregate'],
+  'redis': ['get', 'set', 'del', 'exists', 'expire', 'hget', 'hset', 'lpush', 'rpush', 'sadd'],
+  'firebase': ['get', 'set', 'add', 'update', 'delete', 'query'],
+  'airtable': ['list', 'get', 'create', 'update', 'delete'],
+  'google-drive': ['list', 'get', 'upload', 'update', 'delete', 'search'],
+  'dropbox': ['list', 'get', 'upload', 'delete', 'search'],
+  'aws-s3': ['getObject', 'putObject', 'deleteObject', 'listObjects', 'copyObject'],
+  'http-request': ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 };
 
 export default function NodeConfigPanel() {
@@ -191,17 +327,34 @@ export default function NodeConfigPanel() {
                   🔑 ENV
                 </button>
               )}
-              <button
-                onClick={() => {
-                  const key = prompt('Parameter name:');
-                  if (key) {
+              <select
+                onChange={(e) => {
+                  const key = e.target.value;
+                  if (key === '__custom__') {
+                    // Allow custom parameter input
+                    const customKey = prompt('Enter parameter name:');
+                    if (customKey && !selectedNode.data.parameters[customKey]) {
+                      handleParameterChange(customKey, '');
+                    }
+                  } else if (key && !selectedNode.data.parameters[key]) {
                     handleParameterChange(key, '');
                   }
+                  e.target.value = ''; // Reset select
                 }}
-                className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 transition-colors"
+                className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 transition-colors cursor-pointer"
               >
-                + Add
-              </button>
+                <option value="">+ Add Param</option>
+                {SUGGESTED_PARAMS[selectedNode.data.service]?.map((param) => (
+                  <option 
+                    key={param} 
+                    value={param}
+                    disabled={!!selectedNode.data.parameters[param]}
+                  >
+                    {param}
+                  </option>
+                )) || <option value="custom">Custom...</option>}
+                <option value="__custom__">➕ Custom...</option>
+              </select>
             </div>
           </div>
           
@@ -257,13 +410,43 @@ export default function NodeConfigPanel() {
                       {hint.hint}
                     </div>
                   )}
-                  <textarea
-                    value={String(value)}
-                    onChange={(e) => handleParameterChange(key, e.target.value)}
-                    placeholder={hint?.placeholder || `Enter ${key}`}
-                    rows={key === 'message' || key === 'code' ? 4 : 2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
+                  
+                  {/* Render dropdown for 'operation' or 'method' fields */}
+                  {(key === 'operation' || key === 'method') && OPERATION_OPTIONS[selectedNode.data.service] ? (
+                    <select
+                      value={String(value)}
+                      onChange={(e) => handleParameterChange(key, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select {key}...</option>
+                      {OPERATION_OPTIONS[selectedNode.data.service].map((op) => (
+                        <option key={op} value={op}>
+                          {op}
+                        </option>
+                      ))}
+                    </select>
+                  ) : key === 'connection' || key === 'headers' || key === 'body' || key === 'data' || key === 'filter' || key === 'properties' ? (
+                    /* JSON fields - use textarea with syntax highlighting hint */
+                    <div className="relative">
+                      <textarea
+                        value={String(value)}
+                        onChange={(e) => handleParameterChange(key, e.target.value)}
+                        placeholder={hint?.placeholder || `Enter ${key} (JSON format)`}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+                      />
+                      <div className="absolute top-1 right-2 text-xs text-gray-400">JSON</div>
+                    </div>
+                  ) : (
+                    /* Regular textarea for other fields */
+                    <textarea
+                      value={String(value)}
+                      onChange={(e) => handleParameterChange(key, e.target.value)}
+                      placeholder={hint?.placeholder || `Enter ${key}`}
+                      rows={key === 'message' || key === 'code' || key === 'text' || key === 'desc' ? 4 : 2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
+                  )}
                 </div>
               );
             })}

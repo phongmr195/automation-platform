@@ -23,6 +23,7 @@
     "@hono/node-server": "^1.9.6",
     "@hono/zod-validator": "^0.7.5",
     "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@notionhq/client": "^5.4.0",
     "@prisma/client": "^6.19.0",
     "@supabase/supabase-js": "^2.86.0",
     "@types/bcrypt": "^6.0.0",
