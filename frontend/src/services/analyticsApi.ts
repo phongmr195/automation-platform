@@ -199,7 +199,7 @@ export class AnalyticsAPI {
     if (params?.organizationId) query.append('organizationId', params.organizationId);
 
     return this.request<WorkflowMetric[]>(
-      `/analytics/workflow-metrics?${query.toString()}`
+      `/analytics/workflow-performance?${query.toString()}`
     );
   }
 

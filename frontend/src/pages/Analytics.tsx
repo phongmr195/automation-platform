@@ -183,15 +183,15 @@ export const Analytics: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="CPU Usage"
-          value={`${resourceMetrics?.averageCpu.toFixed(1) || 0}%`}
+          value={`${(resourceMetrics?.averageCpu || 0).toFixed(1)}%`}
           loading={isResourceLoading}
-          subtitle={`Peak: ${resourceMetrics?.maxCpu.toFixed(1) || 0}%`}
+          subtitle={`Peak: ${(resourceMetrics?.maxCpu || 0).toFixed(1)}%`}
         />
         <StatCard
           title="Memory Usage"
-          value={`${resourceMetrics?.averageMemory.toFixed(1) || 0}%`}
+          value={`${(resourceMetrics?.averageMemory || 0).toFixed(1)}%`}
           loading={isResourceLoading}
-          subtitle={`Peak: ${resourceMetrics?.maxMemory.toFixed(1) || 0}%`}
+          subtitle={`Peak: ${(resourceMetrics?.maxMemory || 0).toFixed(1)}%`}
         />
         <StatCard
           title="Storage"
