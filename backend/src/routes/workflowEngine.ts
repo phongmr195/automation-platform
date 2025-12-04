@@ -210,6 +210,29 @@ app.post('/workflows/:id/execute', async (c) => {
 });
 
 /**
+ * GET /engine/workflows/:id/executions
+ * Get execution history for a workflow
+ */
+app.get('/workflows/:id/executions', async (c) => {
+  try {
+    const workflowId = c.req.param('id');
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '10');
+    const status = c.req.query('status');
+
+    const executions = await workflowService.getExecutionsByWorkflowId(
+      workflowId,
+      { page, limit, status }
+    );
+
+    return c.json(executions);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Failed to fetch executions: ${errorMessage}` }, 500);
+  }
+});
+
+/**
  * GET /engine/executions/:executionId
  * Get execution details from database
  */
@@ -226,6 +249,136 @@ app.get('/executions/:executionId', async (c) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return c.json({ error: `Failed to fetch execution: ${errorMessage}` }, 500);
+  }
+});
+
+/**
+ * POST /engine/executions/:executionId/retry
+ * Retry a failed execution
+ */
+app.post('/executions/:executionId/retry', async (c) => {
+  try {
+    const executionId = c.req.param('executionId');
+    const execution = await workflowService.getExecutionById(executionId);
+
+    if (!execution) {
+      return c.json({ error: 'Execution not found' }, 404);
+    }
+
+    const workflow = await workflowService.getWorkflowById(execution.workflowId);
+    if (!workflow) {
+      return c.json({ error: 'Workflow not found' }, 404);
+    }
+
+    // Create new execution record
+    const newExecution = await workflowService.createExecution({
+      workflowId: workflow.id,
+      status: 'running',
+      input: execution.input,
+      definitionSnapshot: { nodes: workflow.nodes, connections: workflow.connections },
+    });
+
+    // Execute workflow with same input
+    const result = await workflowExecutor.execute(workflow, execution.input);
+
+    // Convert Map to object for JSON
+    const nodeResults: Record<string, any> = {};
+    result.nodeResults.forEach((value: any, key: string) => {
+      nodeResults[key] = value;
+    });
+
+    // Update execution
+    await workflowService.updateExecution(newExecution.id, {
+      status: result.status,
+      error: result.error,
+      nodeResults,
+    });
+
+    return c.json({
+      message: 'Execution retried',
+      execution: {
+        executionId: newExecution.id,
+        workflowId: result.workflowId,
+        status: result.status,
+        startedAt: result.startedAt,
+        finishedAt: result.finishedAt,
+        duration: result.duration,
+        nodeResults,
+        error: result.error,
+      },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Retry failed: ${errorMessage}` }, 500);
+  }
+});
+
+/**
+ * POST /engine/executions/:executionId/replay
+ * Replay an execution with the same inputs
+ */
+app.post('/executions/:executionId/replay', async (c) => {
+  try {
+    const executionId = c.req.param('executionId');
+    const execution = await workflowService.getExecutionById(executionId);
+
+    if (!execution) {
+      return c.json({ error: 'Execution not found' }, 404);
+    }
+
+    const workflow = await workflowService.getWorkflowById(execution.workflowId);
+    if (!workflow) {
+      return c.json({ error: 'Workflow not found' }, 404);
+    }
+
+    // Use the snapshot from the original execution to replay with exact same definition
+    const workflowSnapshot: Workflow = {
+      ...workflow,
+      nodes: execution.definitionSnapshot.nodes || workflow.nodes,
+      connections: execution.definitionSnapshot.connections || workflow.connections,
+    };
+
+    // Create new execution record
+    const newExecution = await workflowService.createExecution({
+      workflowId: workflow.id,
+      status: 'running',
+      input: execution.input,
+      definitionSnapshot: execution.definitionSnapshot,
+    });
+
+    // Execute workflow with snapshot
+    const result = await workflowExecutor.execute(workflowSnapshot, execution.input);
+
+    // Convert Map to object for JSON
+    const nodeResults: Record<string, any> = {};
+    result.nodeResults.forEach((value: any, key: string) => {
+      nodeResults[key] = value;
+    });
+
+    // Update execution
+    await workflowService.updateExecution(newExecution.id, {
+      status: result.status,
+      error: result.error,
+      nodeResults,
+    });
+
+    return c.json({
+      message: 'Execution replayed',
+      execution: {
+        executionId: newExecution.id,
+        originalExecutionId: executionId,
+        workflowId: result.workflowId,
+        status: result.status,
+        startedAt: result.startedAt,
+        finishedAt: result.finishedAt,
+        duration: result.duration,
+        nodeResults,
+        error: result.error,
+      },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({ error: `Replay failed: ${errorMessage}` }, 500);
   }
 });
 

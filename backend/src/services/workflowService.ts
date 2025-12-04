@@ -206,6 +206,45 @@ export class WorkflowService {
   }
 
   /**
+   * Get executions for a workflow with pagination and filters
+   */
+  async getExecutionsByWorkflowId(
+    workflowId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    } = {}
+  ) {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ExecutionWhereInput = {
+      workflowId,
+      ...(options.status && options.status !== 'all' && { status: options.status }),
+    };
+
+    const [executions, total] = await Promise.all([
+      prisma.execution.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.execution.count({ where }),
+    ]);
+
+    return {
+      executions,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
    * Get executions for a workflow
    */
   async getWorkflowExecutions(workflowId: string, limit: number = 50) {
