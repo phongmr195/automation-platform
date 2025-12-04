@@ -24,6 +24,7 @@ import templateRoutes from "./routes/templates";
 import marketplaceRoutes from "./routes/marketplace";
 import customNodesRoutes from "./routes/custom-nodes";
 import analyticsRoutes from "./routes/analytics";
+import alertsRoutes from "./routes/alerts";
 import authRoutes from "./routes/auth";
 import oauthRoutes from "./routes/oauth";
 import organizationRoutes from "./routes/organizations";
@@ -64,6 +65,7 @@ app.route("/templates", templateRoutes);
 app.route("/marketplace", marketplaceRoutes);
 app.route("/custom-nodes", customNodesRoutes);
 app.route("/analytics", analyticsRoutes);
+app.route("/alerts", alertsRoutes);
 
 // Health check
 app.get("/", (c) => c.text("Automation Platform API"));

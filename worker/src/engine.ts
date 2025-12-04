@@ -327,6 +327,16 @@ export async function runWorkflowExecution(executionId: string) {
       duration
     );
 
+    // Evaluate alert rules (e.g., for slow executions)
+    await evaluateAlerts(
+      execution.workflow.id,
+      executionId,
+      {
+        status: 'completed',
+        duration,
+      }
+    );
+
     // Emit execution completed event
     emitExecutionCompleted(executionId, "completed");
     emitExecutionLog(executionId, "info", "Execution completed successfully");
@@ -350,6 +360,17 @@ export async function runWorkflowExecution(executionId: string) {
       execution.workflow.organizationId,
       'failed',
       duration
+    );
+
+    // Evaluate alert rules for failed execution
+    await evaluateAlerts(
+      execution.workflow.id,
+      executionId,
+      {
+        status: 'failed',
+        duration,
+        error: err?.message ?? 'Unknown error',
+      }
     );
 
     // Emit execution failed event
@@ -386,5 +407,35 @@ async function recordExecutionMetrics(
   } catch (error) {
     // Don't fail the execution if metrics recording fails
     console.error('Error recording metrics:', error);
+  }
+}
+
+/**
+ * Evaluate alert rules for workflow execution
+ */
+async function evaluateAlerts(
+  workflowId: string,
+  executionId: string,
+  executionData: {
+    status: string;
+    duration: number;
+    error?: string;
+  }
+) {
+  try {
+    // Call alert service via HTTP
+    await axios.post(
+      `http://localhost:${process.env.PORT || 3000}/api/alerts/evaluate`,
+      {
+        workflowId,
+        executionId,
+        executionData,
+      }
+    ).catch(err => {
+      console.error('Failed to evaluate alerts:', err.message);
+    });
+  } catch (error) {
+    // Don't fail the execution if alert evaluation fails
+    console.error('Error evaluating alerts:', error);
   }
 }

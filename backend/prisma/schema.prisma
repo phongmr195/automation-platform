@@ -665,3 +665,164 @@ model CostTracking {
   @@index([organizationId])
   @@index([totalCost])
 }
+
+// -------------------------------------------------------
+// ALERTING SYSTEM
+// -------------------------------------------------------
+
+model AlertRule {
+  id             String   @id @default(cuid())
+  
+  // Basic info
+  name           String
+  description    String?
+  enabled        Boolean  @default(true)
+  
+  // Scope
+  organizationId String
+  workflowId     String?  // null = organization-wide
+  
+  // Trigger conditions
+  triggerType    AlertTriggerType
+  conditions     Json     // Flexible condition storage
+  
+  // Evaluation settings
+  evaluationInterval Int   @default(300) // seconds
+  cooldownPeriod     Int   @default(900) // seconds to wait before re-alerting
+  
+  // Alert channels (many-to-many)
+  channels       AlertRuleChannel[]
+  
+  // Alert history
+  alerts         AlertHistory[]
+  
+  // Metadata
+  lastTriggeredAt DateTime?
+  lastEvaluatedAt DateTime?
+  triggerCount    Int      @default(0)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([organizationId])
+  @@index([workflowId])
+  @@index([enabled])
+  @@index([triggerType])
+}
+
+enum AlertTriggerType {
+  EXECUTION_FAILED       // Workflow execution failed
+  EXECUTION_SLOW         // Execution exceeded duration threshold
+  ERROR_RATE_HIGH        // Error rate exceeded threshold
+  SUCCESS_RATE_LOW       // Success rate below threshold
+  SCHEDULE_MISSED        // Scheduled execution missed
+  RESOURCE_LIMIT         // Resource usage exceeded limit
+  COST_THRESHOLD         // Cost exceeded budget
+  CUSTOM                 // Custom condition evaluation
+}
+
+model AlertChannel {
+  id             String   @id @default(cuid())
+  
+  // Basic info
+  name           String
+  description    String?
+  enabled        Boolean  @default(true)
+  
+  // Scope
+  organizationId String
+  
+  // Channel type and configuration
+  type           AlertChannelType
+  config         Json     // Channel-specific configuration
+  
+  // Email config: { "to": ["email@example.com"], "from": "alerts@platform.com", "smtp": {...} }
+  // Slack config: { "webhookUrl": "https://hooks.slack.com/...", "channel": "#alerts" }
+  // Webhook config: { "url": "https://api.example.com/webhook", "method": "POST", "headers": {...} }
+  
+  // Alert rules using this channel
+  rules          AlertRuleChannel[]
+  
+  // Statistics
+  lastUsedAt     DateTime?
+  alertsSent     Int      @default(0)
+  alertsFailed   Int      @default(0)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([organizationId])
+  @@index([type])
+  @@index([enabled])
+}
+
+enum AlertChannelType {
+  EMAIL
+  SLACK
+  WEBHOOK
+  DISCORD
+  TEAMS
+  TELEGRAM
+}
+
+model AlertRuleChannel {
+  id        String   @id @default(cuid())
+  
+  ruleId    String
+  rule      AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  
+  channelId String
+  channel   AlertChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  
+  // Channel-specific overrides
+  config    Json?    // Override channel config for this rule
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([ruleId, channelId])
+  @@index([ruleId])
+  @@index([channelId])
+}
+
+model AlertHistory {
+  id             String   @id @default(cuid())
+  
+  // Alert rule
+  ruleId         String
+  rule           AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  
+  // Trigger context
+  workflowId     String?
+  executionId    String?
+  
+  // Alert details
+  severity       AlertSeverity
+  message        String
+  details        Json?    // Additional context
+  
+  // Delivery status
+  channelsSent   Json     // { "channelId": { "status": "sent", "timestamp": "..." } }
+  channelsFailed Json?    // Failed delivery attempts
+  
+  // Timestamps
+  triggeredAt    DateTime @default(now())
+  resolvedAt     DateTime?
+  acknowledged   Boolean  @default(false)
+  acknowledgedAt DateTime?
+  acknowledgedBy String?  // userId
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([ruleId])
+  @@index([workflowId])
+  @@index([executionId])
+  @@index([triggeredAt])
+  @@index([severity])
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}

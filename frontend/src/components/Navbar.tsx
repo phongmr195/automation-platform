@@ -80,6 +80,14 @@ export default function Navbar() {
                   Analytics
                 </Link>
 
+                {/* Alerts Link */}
+                <Link
+                  to="/alerts"
+                  className={getLinkClass('/alerts')}
+                >
+                  Alerts
+                </Link>
+
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}
