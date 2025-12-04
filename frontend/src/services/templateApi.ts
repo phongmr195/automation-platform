@@ -3,6 +3,30 @@ import type { WorkflowTemplate } from '../types/workflow';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Create axios instance with auth interceptor
+const templateApiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add auth token to requests
+templateApiClient.interceptors.request.use((config) => {
+  const authTokens = localStorage.getItem('authTokens');
+  if (authTokens) {
+    try {
+      const tokens = JSON.parse(authTokens);
+      if (tokens?.accessToken) {
+        config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+      }
+    } catch (error) {
+      console.error('Failed to parse auth tokens:', error);
+    }
+  }
+  return config;
+});
+
 export const templateApi = {
   /**
    * Get all templates with optional filters
@@ -13,7 +37,7 @@ export const templateApi = {
     difficulty?: string;
     featured?: boolean;
   }): Promise<WorkflowTemplate[]> {
-    const response = await axios.get(`${API_URL}/templates`, { params });
+    const response = await templateApiClient.get('/templates', { params });
     return response.data.templates || response.data;
   },
 
@@ -21,7 +45,7 @@ export const templateApi = {
    * Get featured templates
    */
   async getFeaturedTemplates(): Promise<WorkflowTemplate[]> {
-    const response = await axios.get(`${API_URL}/templates/featured`);
+    const response = await templateApiClient.get('/templates/featured');
     return response.data.templates || response.data;
   },
 
@@ -29,7 +53,7 @@ export const templateApi = {
    * Get templates by category
    */
   async getTemplatesByCategory(category: string): Promise<WorkflowTemplate[]> {
-    const response = await axios.get(`${API_URL}/templates`, {
+    const response = await templateApiClient.get('/templates', {
       params: { category },
     });
     return response.data.templates || response.data;
@@ -39,7 +63,7 @@ export const templateApi = {
    * Get all categories with counts
    */
   async getCategories(): Promise<Record<string, number>> {
-    const response = await axios.get(`${API_URL}/templates/categories`);
+    const response = await templateApiClient.get('/templates/categories');
     const categories = response.data.categories || [];
     const result: Record<string, number> = { all: 0 };
     
@@ -55,7 +79,7 @@ export const templateApi = {
    * Get popular tags
    */
   async getTags(limit?: number): Promise<string[]> {
-    const response = await axios.get(`${API_URL}/templates/tags`, {
+    const response = await templateApiClient.get('/templates/tags', {
       params: { limit },
     });
     return response.data;
@@ -65,7 +89,7 @@ export const templateApi = {
    * Search templates
    */
   async searchTemplates(query: string): Promise<WorkflowTemplate[]> {
-    const response = await axios.get(`${API_URL}/templates/search`, {
+    const response = await templateApiClient.get('/templates/search', {
       params: { q: query },
     });
     return response.data;
@@ -75,7 +99,7 @@ export const templateApi = {
    * Get template by ID
    */
   async getTemplateById(id: string): Promise<WorkflowTemplate> {
-    const response = await axios.get(`${API_URL}/templates/${id}`);
+    const response = await templateApiClient.get(`/templates/${id}`);
     return response.data;
   },
 
@@ -83,7 +107,7 @@ export const templateApi = {
    * Create new template (admin only)
    */
   async createTemplate(data: Partial<WorkflowTemplate>): Promise<WorkflowTemplate> {
-    const response = await axios.post(`${API_URL}/templates`, data);
+    const response = await templateApiClient.post('/templates', data);
     return response.data;
   },
 
@@ -91,7 +115,7 @@ export const templateApi = {
    * Update template (admin only)
    */
   async updateTemplate(id: string, data: Partial<WorkflowTemplate>): Promise<WorkflowTemplate> {
-    const response = await axios.put(`${API_URL}/templates/${id}`, data);
+    const response = await templateApiClient.put(`/templates/${id}`, data);
     return response.data;
   },
 
@@ -99,7 +123,7 @@ export const templateApi = {
    * Delete template (admin only)
    */
   async deleteTemplate(id: string): Promise<void> {
-    await axios.delete(`${API_URL}/templates/${id}`);
+    await templateApiClient.delete(`/templates/${id}`);
   },
 
   /**
@@ -115,7 +139,7 @@ export const templateApi = {
       parameterValues?: Record<string, any>;
     }
   ): Promise<{ workflowId: string }> {
-    const response = await axios.post(`${API_URL}/templates/${id}/install`, data);
+    const response = await templateApiClient.post(`/templates/${id}/install`, data);
     return response.data;
   },
 
@@ -123,7 +147,7 @@ export const templateApi = {
    * Rate a template
    */
   async rateTemplate(id: string, rating: number): Promise<{ averageRating: number }> {
-    const response = await axios.post(`${API_URL}/templates/${id}/rate`, { rating });
+    const response = await templateApiClient.post(`/templates/${id}/rate`, { rating });
     return response.data;
   },
 };

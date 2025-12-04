@@ -19,6 +19,25 @@ const engineApi = axios.create({
   },
 });
 
+// Add auth interceptor to both instances
+const authInterceptor = (config: any) => {
+  const authTokens = localStorage.getItem('authTokens');
+  if (authTokens) {
+    try {
+      const tokens = JSON.parse(authTokens);
+      if (tokens?.accessToken) {
+        config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+      }
+    } catch (error) {
+      console.error('Failed to parse auth tokens:', error);
+    }
+  }
+  return config;
+};
+
+api.interceptors.request.use(authInterceptor);
+engineApi.interceptors.request.use(authInterceptor);
+
 export const workflowApi = {
   // Nodes
   getNodes: async (): Promise<{ nodes: NodeDefinition[]; total: number }> => {

@@ -88,7 +88,12 @@ export interface CreateVersionInput {
 
 class CustomNodesApi {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token');
+    const authTokens = localStorage.getItem('authTokens');
+    let token = null;
+    if (authTokens) {
+      const parsedTokens = JSON.parse(authTokens);
+      token = parsedTokens.accessToken;
+    }
     return {
       headers: {
         Authorization: `Bearer ${token}`

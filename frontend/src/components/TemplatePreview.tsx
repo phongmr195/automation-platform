@@ -142,7 +142,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onCl
                 {template.rating > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Rating</span>
-                    <span className="font-medium">⭐ {template.rating.toFixed(1)}</span>
+                    <span className="font-medium">⭐ {(template.rating || 0).toFixed(1)}</span>
                   </div>
                 )}
               </div>

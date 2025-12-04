@@ -65,7 +65,7 @@ export const Analytics: React.FC = () => {
     }
   };
 
-  const successRate = dashboardData
+  const successRate = dashboardData && dashboardData.totalExecutions > 0
     ? ((dashboardData.successfulExecutions / dashboardData.totalExecutions) * 100).toFixed(1)
     : '0';
 
@@ -154,7 +154,7 @@ export const Analytics: React.FC = () => {
           title="Avg Execution Time"
           value={
             dashboardData?.averageExecutionTime
-              ? `${(dashboardData.averageExecutionTime / 1000).toFixed(1)}s`
+              ? `${((dashboardData.averageExecutionTime || 0) / 1000).toFixed(1)}s`
               : '0s'
           }
           loading={isDashboardLoading}
@@ -262,7 +262,7 @@ export const Analytics: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {execution.duration
-                        ? `${(execution.duration / 1000).toFixed(2)}s`
+                        ? `${((execution.duration || 0) / 1000).toFixed(2)}s`
                         : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

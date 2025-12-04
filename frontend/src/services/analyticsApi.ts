@@ -124,9 +124,19 @@ export class AnalyticsAPI {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    // Get token from localStorage if not set
+    let token = this.token;
+    if (!token) {
+      const authTokens = localStorage.getItem('authTokens');
+      if (authTokens) {
+        const parsedTokens = JSON.parse(authTokens);
+        token = parsedTokens.accessToken;
+      }
+    }
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     };
 
@@ -155,7 +165,7 @@ export class AnalyticsAPI {
     if (params?.organizationId) query.append('organizationId', params.organizationId);
 
     return this.request<DashboardData>(
-      `/api/analytics/dashboard?${query.toString()}`
+      `/analytics/dashboard?${query.toString()}`
     );
   }
 
@@ -173,7 +183,7 @@ export class AnalyticsAPI {
     if (params?.organizationId) query.append('organizationId', params.organizationId);
 
     return this.request<ExecutionStats>(
-      `/api/analytics/execution-stats?${query.toString()}`
+      `/analytics/execution-stats?${query.toString()}`
     );
   }
 
@@ -189,7 +199,7 @@ export class AnalyticsAPI {
     if (params?.organizationId) query.append('organizationId', params.organizationId);
 
     return this.request<WorkflowMetric[]>(
-      `/api/analytics/workflow-metrics?${query.toString()}`
+      `/analytics/workflow-metrics?${query.toString()}`
     );
   }
 
@@ -205,7 +215,7 @@ export class AnalyticsAPI {
     if (params?.organizationId) query.append('organizationId', params.organizationId);
 
     return this.request<ResourceMetrics>(
-      `/api/analytics/resource-metrics?${query.toString()}`
+      `/analytics/resource-metrics?${query.toString()}`
     );
   }
 
@@ -221,7 +231,7 @@ export class AnalyticsAPI {
     if (params?.organizationId) query.append('organizationId', params.organizationId);
 
     return this.request<CostAnalysis>(
-      `/api/analytics/cost-analysis?${query.toString()}`
+      `/analytics/cost-analysis?${query.toString()}`
     );
   }
 
@@ -241,7 +251,7 @@ export class AnalyticsAPI {
     if (params.organizationId) query.append('organizationId', params.organizationId);
 
     const response = await fetch(
-      `${this.baseUrl}/api/analytics/export?${query.toString()}`,
+      `${this.baseUrl}/analytics/export?${query.toString()}`,
       {
         headers: {
           ...(this.token && { Authorization: `Bearer ${this.token}` }),

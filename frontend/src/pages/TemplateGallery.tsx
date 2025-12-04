@@ -218,7 +218,7 @@ export const TemplateGallery: React.FC = () => {
                       {/* Stats */}
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
                         <span>📥 {template.installCount} installs</span>
-                        {template.rating > 0 && <span>⭐ {template.rating.toFixed(1)}</span>}
+                        {template.rating > 0 && <span>⭐ {(template.rating || 0).toFixed(1)}</span>}
                       </div>
                     </div>
 

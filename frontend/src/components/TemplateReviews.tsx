@@ -148,7 +148,7 @@ export const TemplateReviews: React.FC<TemplateReviewsProps> = ({ templateId }) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Average Rating */}
             <div className="text-center">
-              <div className="text-4xl font-bold mb-2">{stats.average.toFixed(1)}</div>
+              <div className="text-4xl font-bold mb-2">{(stats.average || 0).toFixed(1)}</div>
               <div className="mb-2">{renderStars(Math.round(stats.average))}</div>
               <div className="text-sm text-gray-600">{stats.total} reviews</div>
             </div>

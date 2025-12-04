@@ -46,7 +46,7 @@ export const WorkflowMetricsTable: React.FC<WorkflowMetricsTableProps> = ({
 
   const calculateSuccessRate = (successful: number, total: number) => {
     if (total === 0) return 0;
-    return ((successful / total) * 100).toFixed(1);
+    return total > 0 ? ((successful / total) * 100).toFixed(1) : '0';
   };
 
   if (loading) {
