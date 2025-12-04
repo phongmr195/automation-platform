@@ -54,7 +54,7 @@ export class NodeRegistry {
   /**
    * Get nodes by category
    */
-  getNodesByCategory(category: 'trigger' | 'action' | 'logic' | 'transform'): NodeDefinition[] {
+  getNodesByCategory(category: 'trigger' | 'action' | 'logic' | 'transform' | 'communication'): NodeDefinition[] {
     return Array.from(this.nodes.values()).filter(node => node.category === category);
   }
 

@@ -111,7 +111,7 @@ export interface INodeExecutor {
  */
 export interface NodeDefinition {
   type: string; // unique identifier
-  category: 'trigger' | 'action' | 'logic' | 'transform';
+  category: 'trigger' | 'action' | 'logic' | 'transform' | 'communication';
   name: string;
   description: string;
   executor: INodeExecutor;
@@ -120,10 +120,39 @@ export interface NodeDefinition {
     type: string;
     required: boolean;
     description?: string;
+    default?: any; // Default value for the input
+    placeholder?: string; // Placeholder text for UI
+    options?: string[]; // Dropdown options for select inputs
   }[];
   outputs?: {
     name: string;
     type: string;
     description?: string;
   }[];
+}
+
+/**
+ * Node Execution Context Interface
+ * Provides access to workflow data and utilities during node execution
+ */
+export interface NodeExecutionContext {
+  workflowId: string;
+  executionId: string;
+  nodeData: Map<string, any>;
+  variables: Record<string, any>;
+  
+  /**
+   * Interpolate template strings like {{nodes.nodeId.field}}
+   */
+  interpolate(template: string): string;
+  
+  /**
+   * Log execution messages
+   */
+  log(level: 'info' | 'warn' | 'error', message: string, data?: any): void;
+  
+  /**
+   * Get credential by ID (with decryption)
+   */
+  getCredential(credentialId: string): Promise<{ id: string; type: string; data: any } | null>;
 }
