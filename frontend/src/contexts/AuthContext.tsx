@@ -23,7 +23,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
-  setTokens: (tokens: AuthTokens | null) => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -133,6 +133,14 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     }
   };
 
+  // Helper to set tokens from OAuth callback
+  const setTokensHelper = (accessToken: string, refreshToken: string) => {
+    const newTokens = { accessToken, refreshToken };
+    setTokens(newTokens);
+    localStorage.setItem('authTokens', JSON.stringify(newTokens));
+    fetchCurrentUser(accessToken);
+  };
+
   const value = useMemo<AuthContextType>(
     () => ({
       user,
@@ -143,7 +151,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       logout,
       isAuthenticated: !!user && !!tokens,
       setUser,
-      setTokens,
+      setTokens: setTokensHelper,
     }),
     [user, tokens, loading]
   );
