@@ -32,63 +32,73 @@ export default function App() {
         <OrganizationProvider>
           <ConfirmDialogProvider>
             <BrowserRouter>
-              <Navbar />
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/auth/callback" element={<OAuthCallback />} />
-                
-                {/* Protected Routes */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Home />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/workflows"
-                  element={
-                    <ProtectedRoute>
-                      <WorkflowList />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/organizations/new"
-                  element={
-                    <ProtectedRoute>
-                      <CreateOrganization />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/organizations/:organizationId/settings"
-                  element={
-                    <ProtectedRoute>
-                      <OrganizationSettings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/editor"
-                  element={
-                    <ProtectedRoute>
-                      <WorkflowEditor />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/editor/:id"
-                  element={
-                    <ProtectedRoute>
-                      <WorkflowEditor />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
+              <div className="flex flex-col h-full">
+                <Navbar />
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/auth/callback" element={<OAuthCallback />} />
+                  
+                  {/* Protected Routes */}
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-auto">
+                          <Home />
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/workflows"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-auto">
+                          <WorkflowList />
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/organizations/new"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-auto">
+                          <CreateOrganization />
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/organizations/:organizationId/settings"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-auto">
+                          <OrganizationSettings />
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/editor"
+                    element={
+                      <ProtectedRoute>
+                        <WorkflowEditor />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/editor/:id"
+                    element={
+                      <ProtectedRoute>
+                        <WorkflowEditor />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </div>
             </BrowserRouter>
             <Toaster position="top-right" richColors />
           </ConfirmDialogProvider>

@@ -136,9 +136,9 @@ export default function NodeConfigPanel() {
   };
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <h2 className="text-lg font-semibold">Node Settings</h2>
         <button
           onClick={() => setSelectedNodeId(null)}
@@ -279,7 +279,7 @@ export default function NodeConfigPanel() {
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 flex-shrink-0">
         <button
           onClick={async () => {
             const confirmed = await confirm({

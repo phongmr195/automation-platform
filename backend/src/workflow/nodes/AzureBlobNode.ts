@@ -194,7 +194,7 @@ export class AzureBlobNode implements INodeExecutor {
 
       return {
         success: true,
-        data: result,
+        output: result,
         duration,
       };
 

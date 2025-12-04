@@ -28,6 +28,13 @@ import { AzureBlobNode } from './AzureBlobNode';
 import { OneDriveNode } from './OneDriveNode';
 import { BoxNode } from './BoxNode';
 
+// Database Nodes
+import { MySQLNode } from './MySQLNode';
+import { MongoDBNode } from './MongoDBNode';
+import { RedisNode } from './RedisNode';
+import { AirtableNode } from './AirtableNode';
+import { FirebaseNode } from './FirebaseNode';
+
 /**
  * Initialize and register all nodes
  */
@@ -443,6 +450,145 @@ export function registerAllNodes(): void {
     ],
   });
 
+  // ==================== DATABASE NODES ====================
+
+  // MySQL Node
+  nodeRegistry.register({
+    type: 'mysql',
+    category: 'database',
+    name: 'MySQL',
+    description: 'Execute MySQL database queries',
+    executor: new MySQLNode(),
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'MySQL connection details (host, port, user, password, database)' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'query', options: ['query', 'select', 'insert', 'update', 'delete'] },
+      { name: 'query', type: 'string', required: false, description: 'Raw SQL query (for query operation)' },
+      { name: 'table', type: 'string', required: false, description: 'Table name', placeholder: 'users' },
+      { name: 'columns', type: 'array', required: false, description: 'Columns to select', placeholder: ['id', 'name', 'email'] },
+      { name: 'data', type: 'object', required: false, description: 'Data for insert/update' },
+      { name: 'where', type: 'object', required: false, description: 'Where clause', placeholder: { id: 1 } },
+      { name: 'limit', type: 'number', required: false, description: 'Limit results' },
+      { name: 'offset', type: 'number', required: false, description: 'Offset results' },
+    ],
+    outputs: [
+      { name: 'rows', type: 'array', description: 'Query results' },
+      { name: 'rowCount', type: 'number', description: 'Number of rows' },
+      { name: 'affectedRows', type: 'number', description: 'Affected rows (for insert/update/delete)' },
+    ],
+  });
+
+  // MongoDB Node
+  nodeRegistry.register({
+    type: 'mongodb',
+    category: 'database',
+    name: 'MongoDB',
+    description: 'Execute MongoDB database operations',
+    executor: new MongoDBNode(),
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'MongoDB connection details (uri, database)' },
+      { name: 'collection', type: 'string', required: true, description: 'Collection name', placeholder: 'users' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'find', options: ['find', 'findOne', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany', 'aggregate', 'count'] },
+      { name: 'filter', type: 'object', required: false, description: 'Query filter', placeholder: { age: { $gte: 18 } } },
+      { name: 'document', type: 'object', required: false, description: 'Document for insertOne' },
+      { name: 'documents', type: 'array', required: false, description: 'Documents for insertMany' },
+      { name: 'update', type: 'object', required: false, description: 'Update operation', placeholder: { $set: { name: 'John' } } },
+      { name: 'projection', type: 'object', required: false, description: 'Fields to return', placeholder: { name: 1, email: 1 } },
+      { name: 'sort', type: 'object', required: false, description: 'Sort order', placeholder: { createdAt: -1 } },
+      { name: 'limit', type: 'number', required: false, description: 'Limit results' },
+      { name: 'skip', type: 'number', required: false, description: 'Skip documents' },
+      { name: 'pipeline', type: 'array', required: false, description: 'Aggregation pipeline' },
+    ],
+    outputs: [
+      { name: 'documents', type: 'array', description: 'Found documents' },
+      { name: 'document', type: 'object', description: 'Found document (findOne)' },
+      { name: 'count', type: 'number', description: 'Document count' },
+      { name: 'insertedId', type: 'string', description: 'Inserted document ID' },
+      { name: 'modifiedCount', type: 'number', description: 'Modified documents count' },
+      { name: 'deletedCount', type: 'number', description: 'Deleted documents count' },
+    ],
+  });
+
+  // Redis Node
+  nodeRegistry.register({
+    type: 'redis',
+    category: 'database',
+    name: 'Redis',
+    description: 'Execute Redis cache operations',
+    executor: new RedisNode(),
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'Redis connection details (host, port, password, db)' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'get', options: ['get', 'set', 'del', 'exists', 'expire', 'ttl', 'keys', 'incr', 'decr', 'hget', 'hset', 'hgetall', 'lpush', 'rpush', 'lpop', 'rpop', 'lrange', 'sadd', 'smembers', 'srem'] },
+      { name: 'key', type: 'string', required: true, description: 'Redis key', placeholder: 'user:123' },
+      { name: 'value', type: 'string', required: false, description: 'Value to set' },
+      { name: 'field', type: 'string', required: false, description: 'Hash field name' },
+      { name: 'members', type: 'array', required: false, description: 'Set members' },
+      { name: 'ttl', type: 'number', required: false, description: 'Time to live (seconds)' },
+      { name: 'pattern', type: 'string', required: false, description: 'Key pattern (for keys operation)', placeholder: 'user:*' },
+      { name: 'start', type: 'number', required: false, description: 'List range start' },
+      { name: 'stop', type: 'number', required: false, description: 'List range stop' },
+    ],
+    outputs: [
+      { name: 'value', type: 'string', description: 'Retrieved value' },
+      { name: 'exists', type: 'boolean', description: 'Key existence' },
+      { name: 'keys', type: 'array', description: 'Found keys' },
+      { name: 'hash', type: 'object', description: 'Hash object' },
+      { name: 'members', type: 'array', description: 'Set members' },
+      { name: 'range', type: 'array', description: 'List range' },
+    ],
+  });
+
+  // Airtable Node
+  nodeRegistry.register({
+    type: 'airtable',
+    category: 'database',
+    name: 'Airtable',
+    description: 'Manage Airtable records',
+    executor: new AirtableNode(),
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'Airtable connection (apiKey, baseId)' },
+      { name: 'table', type: 'string', required: true, description: 'Table name', placeholder: 'Users' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['list', 'get', 'create', 'update', 'delete', 'query'] },
+      { name: 'recordId', type: 'string', required: false, description: 'Record ID', placeholder: 'recXXXXXXXXXXXXXX' },
+      { name: 'fields', type: 'object', required: false, description: 'Record fields' },
+      { name: 'filterByFormula', type: 'string', required: false, description: 'Filter formula', placeholder: '{Status} = "Active"' },
+      { name: 'sort', type: 'array', required: false, description: 'Sort configuration', placeholder: [{ field: 'Name', direction: 'asc' }] },
+      { name: 'maxRecords', type: 'number', required: false, description: 'Maximum records to return' },
+      { name: 'pageSize', type: 'number', required: false, description: 'Page size' },
+      { name: 'view', type: 'string', required: false, description: 'View name' },
+    ],
+    outputs: [
+      { name: 'records', type: 'array', description: 'List of records' },
+      { name: 'record', type: 'object', description: 'Single record' },
+      { name: 'count', type: 'number', description: 'Record count' },
+    ],
+  });
+
+  // Firebase Node
+  nodeRegistry.register({
+    type: 'firebase',
+    category: 'database',
+    name: 'Firebase Firestore',
+    description: 'Execute Firebase Firestore operations',
+    executor: new FirebaseNode(),
+    inputs: [
+      { name: 'connection', type: 'object', required: true, description: 'Firebase connection (projectId, clientEmail, privateKey)' },
+      { name: 'collection', type: 'string', required: true, description: 'Collection name', placeholder: 'users' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'get', options: ['get', 'set', 'add', 'update', 'delete', 'query'] },
+      { name: 'documentId', type: 'string', required: false, description: 'Document ID', placeholder: 'user123' },
+      { name: 'data', type: 'object', required: false, description: 'Document data' },
+      { name: 'where', type: 'array', required: false, description: 'Query conditions', placeholder: [{ field: 'age', operator: '>=', value: 18 }] },
+      { name: 'orderBy', type: 'object', required: false, description: 'Order by', placeholder: { field: 'createdAt', direction: 'desc' } },
+      { name: 'limit', type: 'number', required: false, description: 'Limit results' },
+      { name: 'offset', type: 'number', required: false, description: 'Offset results' },
+    ],
+    outputs: [
+      { name: 'documents', type: 'array', description: 'List of documents' },
+      { name: 'document', type: 'object', description: 'Single document' },
+      { name: 'id', type: 'string', description: 'Document ID' },
+      { name: 'count', type: 'number', description: 'Document count' },
+    ],
+  });
+
   console.log(`\n📦 Registered ${nodeRegistry.getAllNodes().length} workflow nodes`);
 }
 
@@ -469,4 +615,10 @@ export {
   AzureBlobNode,
   OneDriveNode,
   BoxNode,
+  // Database Nodes
+  MySQLNode,
+  MongoDBNode,
+  RedisNode,
+  AirtableNode,
+  FirebaseNode,
 };

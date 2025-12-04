@@ -111,7 +111,7 @@ export interface INodeExecutor {
  */
 export interface NodeDefinition {
   type: string; // unique identifier
-  category: 'trigger' | 'action' | 'logic' | 'transform' | 'communication' | 'storage';
+  category: 'trigger' | 'action' | 'logic' | 'transform' | 'communication' | 'storage' | 'database';
   name: string;
   description: string;
   executor: INodeExecutor;
@@ -121,7 +121,7 @@ export interface NodeDefinition {
     required: boolean;
     description?: string;
     default?: any; // Default value for the input
-    placeholder?: string; // Placeholder text for UI
+    placeholder?: string | any; // Placeholder text for UI (can be object for complex types)
     options?: string[]; // Dropdown options for select inputs
   }[];
   outputs?: {

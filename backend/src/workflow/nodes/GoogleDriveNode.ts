@@ -172,7 +172,7 @@ export class GoogleDriveNode implements INodeExecutor {
 
       return {
         success: true,
-        data: result,
+        output: result,
         duration,
       };
 

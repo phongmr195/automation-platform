@@ -38,7 +38,7 @@ export class DropboxNode implements INodeExecutor {
           const uploadResponse = await dbx.filesUpload({
             path: config.path,
             contents: config.content || '',
-            mode: { '.tag': config.mode || 'add' },
+            mode: { '.tag': 'add' } as any,
             autorename: config.autorename || false,
           });
 
@@ -185,7 +185,7 @@ export class DropboxNode implements INodeExecutor {
             name: metadataResponse.result.name,
             path: metadataResponse.result.path_display,
             type: metadataResponse.result['.tag'],
-            id: metadataResponse.result.id,
+            id: (metadataResponse.result as any).id,
             size: (metadataResponse.result as any).size,
             serverModified: (metadataResponse.result as any).server_modified,
           };
@@ -199,7 +199,7 @@ export class DropboxNode implements INodeExecutor {
 
       return {
         success: true,
-        data: result,
+        output: result,
         duration,
       };
 
