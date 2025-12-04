@@ -58,6 +58,7 @@ model Organization {
   workflows   Workflow[]
   credentials Credential[]
   auditLogs   AuditLog[]
+  folders     WorkflowFolder[]
 
   @@index([slug])
 }
@@ -131,6 +132,12 @@ model Workflow {
   triggers    Json     @default("[]")
   settings    Json?
   
+  // Organization features
+  starred     Boolean  @default(false)
+  folderId    String?
+  folder      WorkflowFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  lastOpenedAt DateTime?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -145,6 +152,25 @@ model Workflow {
 
   @@index([organizationId])
   @@index([ownerId])
+  @@index([folderId])
+  @@index([starred])
+  @@index([lastOpenedAt])
+}
+
+// -------------------------------------------------------
+// WORKFLOW FOLDER
+// -------------------------------------------------------
+model WorkflowFolder {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workflows Workflow[]
+
+  @@index([organizationId])
 }
 
 // -------------------------------------------------------

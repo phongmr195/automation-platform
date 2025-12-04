@@ -1,4 +1,5 @@
 import React from "react";
+import { Star, Copy } from "lucide-react";
 import "./WorkflowCard.css";
 
 interface WorkflowCardProps {
@@ -9,6 +10,8 @@ interface WorkflowCardProps {
     status: "PUBLISHED" | "DRAFT";
     createdAt: string;
     updatedAt: string;
+    starred?: boolean;
+    folderId?: string | null;
     _count?: {
       versions: number;
       executions: number;
@@ -17,6 +20,11 @@ interface WorkflowCardProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onExecute: (id: string) => void;
+  onToggleStar?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onExport?: (id: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export const WorkflowCard: React.FC<WorkflowCardProps> = ({
@@ -24,6 +32,11 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
   onEdit,
   onDelete,
   onExecute,
+  onToggleStar,
+  onDuplicate,
+  onExport,
+  selected,
+  onToggleSelect,
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -35,13 +48,47 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
   };
 
   return (
-    <div className="workflow-card">
+    <div className={`workflow-card ${selected ? 'selected' : ''}`}>
+      {/* Selection Checkbox */}
+      {onToggleSelect && (
+        <div className="workflow-card-checkbox">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect(workflow.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+        </div>
+      )}
+
       <div className="workflow-card-header">
         <div className="workflow-card-title">
           <h3>{workflow.name}</h3>
-          <span className={`status-badge ${workflow.status?.toLowerCase() || 'draft'}`}>
-            {workflow.status || 'Draft'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`status-badge ${workflow.status?.toLowerCase() || 'draft'}`}>
+              {workflow.status || 'Draft'}
+            </span>
+            {/* Star Button */}
+            {onToggleStar && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleStar(workflow.id);
+                }}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                title={workflow.starred ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star
+                  className={`w-4 h-4 ${
+                    workflow.starred
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-gray-400'
+                  }`}
+                />
+              </button>
+            )}
+          </div>
         </div>
         {workflow.description && (
           <p className="workflow-card-description">{workflow.description}</p>
@@ -109,6 +156,15 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
               <path d="M5 3L11 8L5 13V3Z" fill="currentColor" />
             </svg>
           </button>
+          {onDuplicate && (
+            <button
+              className="action-button duplicate"
+              onClick={() => onDuplicate(workflow.id)}
+              title="Duplicate workflow"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          )}
           <button
             className="action-button edit"
             onClick={() => onEdit(workflow.id)}

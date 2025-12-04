@@ -79,6 +79,8 @@ export const workflowRoutes = (opts: {
     // Get query parameters
     const search = c.req.query("search") || "";
     const status = c.req.query("status") || ""; // all, published, draft
+    const starred = c.req.query("starred") === "true";
+    const folderId = c.req.query("folderId") || "";
     const sort = c.req.query("sort") || "createdAt";
     const order = c.req.query("order") || "desc";
     const page = Number.parseInt(c.req.query("page") || "1");
@@ -96,6 +98,16 @@ export const workflowRoutes = (opts: {
         contains: search,
         mode: "insensitive",
       };
+    }
+
+    // Filter by starred
+    if (starred) {
+      where.starred = true;
+    }
+
+    // Filter by folder
+    if (folderId) {
+      where.folderId = folderId;
     }
 
     // Filter by status
@@ -264,7 +276,194 @@ export const workflowRoutes = (opts: {
       }
     );
 
+    // Update lastOpenedAt
+    await prisma.workflow.update({
+      where: { id },
+      data: { lastOpenedAt: new Date() },
+    });
+
     return c.json({ executionId: execution.id, versionId: versionToRun.id });
+  });
+
+  // TOGGLE STAR
+  router.post("/:id/star", async (c) => {
+    const id = c.req.param("id");
+
+    const workflow = await prisma.workflow.findUnique({
+      where: { id },
+      select: { starred: true },
+    });
+
+    if (!workflow) return c.json({ error: "Workflow not found" }, 404);
+
+    const updated = await prisma.workflow.update({
+      where: { id },
+      data: { starred: !workflow.starred },
+      select: { id: true, starred: true },
+    });
+
+    return c.json(updated);
+  });
+
+  // DUPLICATE WORKFLOW
+  router.post("/:id/duplicate", async (c) => {
+    const id = c.req.param("id");
+
+    const original = await prisma.workflow.findUnique({
+      where: { id },
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!original) return c.json({ error: "Workflow not found" }, 404);
+
+    const latestVersion = original.versions[0];
+    if (!latestVersion) {
+      return c.json({ error: "Workflow has no versions" }, 400);
+    }
+
+    // Create duplicate
+    const duplicate = await prisma.workflow.create({
+      data: {
+        name: `${original.name} (Copy)`,
+        description: original.description,
+        organizationId: original.organizationId,
+        ownerId: original.ownerId,
+        folderId: original.folderId,
+        versions: {
+          create: {
+            versionNumber: 1,
+            definition: latestVersion.definition,
+            isDraft: true,
+          },
+        },
+      },
+      include: {
+        versions: true,
+      },
+    });
+
+    return c.json(duplicate);
+  });
+
+  // EXPORT WORKFLOW(S)
+  router.post("/export", async (c) => {
+    const body = await c.req.json();
+    const workflowIds = body.workflowIds as string[];
+
+    if (!Array.isArray(workflowIds) || workflowIds.length === 0) {
+      return c.json({ error: "Invalid workflowIds" }, 400);
+    }
+
+    const workflows = await prisma.workflow.findMany({
+      where: { id: { in: workflowIds } },
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    const exportData = {
+      version: "1.0",
+      exported: new Date().toISOString(),
+      workflows: workflows.map((wf) => ({
+        name: wf.name,
+        description: wf.description,
+        definition: wf.versions[0]?.definition,
+      })),
+    };
+
+    return c.json(exportData);
+  });
+
+  // IMPORT WORKFLOW(S)
+  router.post("/import", async (c) => {
+    const body = await c.req.json();
+
+    if (!body.workflows || !Array.isArray(body.workflows)) {
+      return c.json({ error: "Invalid import format" }, 400);
+    }
+
+    const imported = [];
+
+    for (const wf of body.workflows) {
+      const normalized = normalizeWorkflow(wf.definition);
+
+      const created = await prisma.workflow.create({
+        data: {
+          name: wf.name || "Imported Workflow",
+          description: wf.description,
+          versions: {
+            create: {
+              versionNumber: 1,
+              definition: normalized,
+              isDraft: true,
+            },
+          },
+        },
+        include: {
+          versions: true,
+        },
+      });
+
+      imported.push(created);
+    }
+
+    return c.json({ imported: imported.length, workflows: imported });
+  });
+
+  // FOLDER ROUTES
+  router.get("/folders/list", async (c) => {
+    const organizationId = c.req.query("organizationId");
+
+    const folders = await prisma.workflowFolder.findMany({
+      where: organizationId ? { organizationId } : {},
+      include: {
+        _count: {
+          select: { workflows: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return c.json(
+      folders.map((f) => ({
+        id: f.id,
+        name: f.name,
+        workflowCount: f._count.workflows,
+      }))
+    );
+  });
+
+  router.post("/folders", async (c) => {
+    const body = await c.req.json();
+
+    const folder = await prisma.workflowFolder.create({
+      data: {
+        name: body.name,
+        organizationId: body.organizationId,
+      },
+    });
+
+    return c.json(folder);
+  });
+
+  router.put("/:id/folder", async (c) => {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+
+    const workflow = await prisma.workflow.update({
+      where: { id },
+      data: { folderId: body.folderId },
+    });
+
+    return c.json(workflow);
   });
 
   return router;
