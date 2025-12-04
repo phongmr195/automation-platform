@@ -1,6 +1,12 @@
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { useConfirmDialog } from './ui/ConfirmDialog';
+import { useState } from 'react';
+import ExpressionEditor from './ExpressionEditor';
+import AutoCompleteInput from './AutoCompleteInput';
+import { FieldValidation, FieldValidator } from './FieldValidation';
+import TestConfigButton from './TestConfigButton';
+import SampleDataPreview from './SampleDataPreview';
 
 // Suggested parameters for each node type
 const SUGGESTED_PARAMS: Record<string, string[]> = {
@@ -213,6 +219,9 @@ const OPERATION_OPTIONS: Record<string, string[]> = {
 export default function NodeConfigPanel() {
   const { nodes, selectedNodeId, setSelectedNodeId, updateNode } = useWorkflowStore();
   const { confirm } = useConfirmDialog();
+  const [useExpressionEditor, setUseExpressionEditor] = useState<Record<string, boolean>>({});
+  const [showValidation] = useState(true);
+  const [showSampleData, setShowSampleData] = useState(false);
   
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -271,6 +280,13 @@ export default function NodeConfigPanel() {
     }
   };
 
+  const toggleExpressionEditor = (key: string) => {
+    setUseExpressionEditor((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   return (
     <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
       {/* Header */}
@@ -327,6 +343,14 @@ export default function NodeConfigPanel() {
                   🔑 ENV
                 </button>
               )}
+              <button
+                onClick={() => setShowSampleData(!showSampleData)}
+                className="px-2 py-1 bg-purple-500 text-white rounded text-xs font-medium hover:bg-purple-600 transition-colors flex items-center gap-1"
+                title="Toggle sample data preview"
+              >
+                <Sparkles className="w-3 h-3" />
+                {showSampleData ? 'Hide' : 'Preview'}
+              </button>
               <select
                 onChange={(e) => {
                   const key = e.target.value;
@@ -379,31 +403,62 @@ export default function NodeConfigPanel() {
             </div>
           )}
           
+          {/* Sample Data Preview */}
+          {showSampleData && (
+            <div className="mb-3">
+              <SampleDataPreview
+                nodeType={selectedNode.data.service}
+                parameters={selectedNode.data.parameters}
+              />
+            </div>
+          )}
+          
           <div className="space-y-3">
             {Object.entries(selectedNode.data.parameters).map(([key, value]) => {
               const hint = PARAM_HINTS[selectedNode.data.service]?.[key];
+              const validationRules = FieldValidator.getRulesForField(selectedNode.data.service, key);
+              const isExpressionField = useExpressionEditor[key];
               
               return (
                 <div key={key} className="relative">
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-medium text-gray-600">
                       {key}
+                      {validationRules.some(r => r.type === 'required') && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
                     </label>
-                    <button
-                      onClick={() => {
-                        const newParams = { ...selectedNode.data.parameters };
-                        delete newParams[key];
-                        updateNode(selectedNode.id, {
-                          data: {
-                            ...selectedNode.data,
-                            parameters: newParams,
-                          },
-                        });
-                      }}
-                      className="text-red-500 hover:text-red-700 text-xs"
-                    >
-                      ✕
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {/* Toggle expression editor */}
+                      {!['operation', 'method'].includes(key) && (
+                        <button
+                          onClick={() => toggleExpressionEditor(key)}
+                          className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                            isExpressionField
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title={isExpressionField ? 'Switch to simple input' : 'Use expression editor'}
+                        >
+                          {isExpressionField ? 'fx' : 'ab'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          const newParams = { ...selectedNode.data.parameters };
+                          delete newParams[key];
+                          updateNode(selectedNode.id, {
+                            data: {
+                              ...selectedNode.data,
+                              parameters: newParams,
+                            },
+                          });
+                        }}
+                        className="text-red-500 hover:text-red-700 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                   {hint && (
                     <div className="text-xs text-gray-500 mb-1">
@@ -411,41 +466,94 @@ export default function NodeConfigPanel() {
                     </div>
                   )}
                   
-                  {/* Render dropdown for 'operation' or 'method' fields */}
+                  {/* Render appropriate input based on field type */}
                   {(key === 'operation' || key === 'method') && OPERATION_OPTIONS[selectedNode.data.service] ? (
-                    <select
-                      value={String(value)}
-                      onChange={(e) => handleParameterChange(key, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select {key}...</option>
-                      {OPERATION_OPTIONS[selectedNode.data.service].map((op) => (
-                        <option key={op} value={op}>
-                          {op}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        value={String(value)}
+                        onChange={(e) => handleParameterChange(key, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select {key}...</option>
+                        {OPERATION_OPTIONS[selectedNode.data.service].map((op) => (
+                          <option key={op} value={op}>
+                            {op}
+                          </option>
+                        ))}
+                      </select>
+                      <FieldValidation
+                        value={value}
+                        rules={validationRules}
+                        showValidation={showValidation}
+                      />
+                    </>
+                  ) : isExpressionField ? (
+                    /* Expression Editor for complex expressions */
+                    <>
+                      <ExpressionEditor
+                        value={String(value)}
+                        onChange={(newValue) => handleParameterChange(key, newValue)}
+                        placeholder={hint?.placeholder || `Enter ${key}`}
+                        nodeId={selectedNode.id}
+                      />
+                      <FieldValidation
+                        value={value}
+                        rules={validationRules}
+                        showValidation={showValidation}
+                      />
+                    </>
                   ) : key === 'connection' || key === 'headers' || key === 'body' || key === 'data' || key === 'filter' || key === 'properties' ? (
-                    /* JSON fields - use textarea with syntax highlighting hint */
-                    <div className="relative">
+                    /* JSON fields - use textarea with validation */
+                    <>
+                      <div className="relative">
+                        <textarea
+                          value={String(value)}
+                          onChange={(e) => handleParameterChange(key, e.target.value)}
+                          placeholder={hint?.placeholder || `Enter ${key} (JSON format)`}
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+                        />
+                        <div className="absolute top-1 right-2 text-xs text-gray-400">JSON</div>
+                      </div>
+                      <FieldValidation
+                        value={value}
+                        rules={validationRules}
+                        showValidation={showValidation}
+                      />
+                    </>
+                  ) : key === 'url' || key === 'to' || key === 'email' || key === 'from' ? (
+                    /* Auto-complete for specific fields */
+                    <>
+                      <AutoCompleteInput
+                        value={String(value)}
+                        onChange={(newValue) => handleParameterChange(key, newValue)}
+                        placeholder={hint?.placeholder || `Enter ${key}`}
+                        nodeId={selectedNode.id}
+                        fieldName={key}
+                        nodeType={selectedNode.data.service}
+                      />
+                      <FieldValidation
+                        value={value}
+                        rules={validationRules}
+                        showValidation={showValidation}
+                      />
+                    </>
+                  ) : (
+                    /* Regular textarea for other fields */
+                    <>
                       <textarea
                         value={String(value)}
                         onChange={(e) => handleParameterChange(key, e.target.value)}
-                        placeholder={hint?.placeholder || `Enter ${key} (JSON format)`}
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+                        placeholder={hint?.placeholder || `Enter ${key}`}
+                        rows={key === 'message' || key === 'code' || key === 'text' || key === 'desc' ? 4 : 2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       />
-                      <div className="absolute top-1 right-2 text-xs text-gray-400">JSON</div>
-                    </div>
-                  ) : (
-                    /* Regular textarea for other fields */
-                    <textarea
-                      value={String(value)}
-                      onChange={(e) => handleParameterChange(key, e.target.value)}
-                      placeholder={hint?.placeholder || `Enter ${key}`}
-                      rows={key === 'message' || key === 'code' || key === 'text' || key === 'desc' ? 4 : 2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    />
+                      <FieldValidation
+                        value={value}
+                        rules={validationRules}
+                        showValidation={showValidation}
+                      />
+                    </>
                   )}
                 </div>
               );
@@ -459,6 +567,22 @@ export default function NodeConfigPanel() {
             )}
           </div>
         </div>
+
+        {/* Test Configuration */}
+        {Object.keys(selectedNode.data.parameters).length > 0 && (
+          <div>
+            <TestConfigButton
+              nodeType={selectedNode.data.service}
+              parameters={selectedNode.data.parameters}
+              onTestSuccess={(result) => {
+                console.log('Test successful:', result);
+              }}
+              onTestError={(error) => {
+                console.error('Test failed:', error);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Footer Actions */}

@@ -8,7 +8,7 @@ import { workflowExecutor } from '../workflow/WorkflowExecutor';
 import { nodeRegistry } from '../workflow/NodeRegistry';
 import { getWorkflowScheduler } from '../workflow/WorkflowScheduler';
 import { workflowService } from '../services/workflowService';
-import type { Workflow } from '../workflow/types';
+import type { Workflow, WorkflowNode } from '../workflow/types';
 
 const app = new Hono();
 const scheduler = getWorkflowScheduler();
@@ -561,6 +561,73 @@ app.post('/webhook/:workflowId', async (c) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return c.json({ error: `Workflow execution failed: ${errorMessage}` }, 500);
+  }
+});
+
+/**
+ * POST /engine/nodes/test
+ * Test node configuration without saving
+ */
+app.post('/nodes/test', async (c) => {
+  try {
+    const { nodeType, parameters } = await c.req.json();
+
+    if (!nodeType) {
+      return c.json({ error: 'nodeType is required' }, 400);
+    }
+
+    // Create a test node
+    const testNode: WorkflowNode = {
+      id: 'test-node',
+      name: 'Test Node',
+      type: nodeType,
+      data: {
+        service: nodeType,
+        parameters: parameters || {},
+      },
+      position: { x: 0, y: 0 },
+    };
+
+    // Get node executor
+    const executor = nodeRegistry.getExecutor(nodeType);
+    if (!executor) {
+      return c.json({ error: `No executor found for node type: ${nodeType}` }, 400);
+    }
+
+    // Validate node configuration
+    const validation = executor.validate(testNode);
+    if (validation !== true) {
+      return c.json({
+        success: false,
+        error: typeof validation === 'string' ? validation : 'Validation failed',
+        message: 'Configuration validation failed',
+      }, 400);
+    }
+
+    // Execute test (with mock context)
+    const context = {
+      nodes: {},
+      variables: {},
+      input: {},
+    };
+
+    const startTime = Date.now();
+    const result = await executor.execute(testNode, context);
+    const duration = Date.now() - startTime;
+
+    return c.json({
+      success: true,
+      message: 'Test successful',
+      result,
+      duration,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return c.json({
+      success: false,
+      error: errorMessage,
+      message: 'Test execution failed',
+    }, 500);
   }
 });
 
