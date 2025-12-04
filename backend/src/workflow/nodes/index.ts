@@ -20,6 +20,14 @@ import { DiscordNode } from './DiscordNode';
 import { WebhookNode } from './WebhookNode';
 import { SMSNode } from './SMSNode';
 
+// Cloud Storage Nodes
+import { GoogleDriveNode } from './GoogleDriveNode';
+import { DropboxNode } from './DropboxNode';
+import { AWSS3Node } from './AWSS3Node';
+import { AzureBlobNode } from './AzureBlobNode';
+import { OneDriveNode } from './OneDriveNode';
+import { BoxNode } from './BoxNode';
+
 /**
  * Initialize and register all nodes
  */
@@ -286,6 +294,155 @@ export function registerAllNodes(): void {
     ],
   });
 
+  // ==================== CLOUD STORAGE NODES ====================
+
+  // Google Drive Node
+  nodeRegistry.register({
+    type: 'google-drive',
+    category: 'storage',
+    name: 'Google Drive',
+    description: 'Upload, download, list, and manage files in Google Drive',
+    executor: new GoogleDriveNode(),
+    inputs: [
+      { name: 'credentials', type: 'object', required: true, description: 'Google service account credentials (clientEmail, privateKey)' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['upload', 'download', 'list', 'delete', 'createFolder', 'search'] },
+      { name: 'fileId', type: 'string', required: false, description: 'File ID (for download/delete)', placeholder: '1abc...xyz' },
+      { name: 'fileName', type: 'string', required: false, description: 'File name (for upload)', placeholder: 'document.txt' },
+      { name: 'fileContent', type: 'string', required: false, description: 'File content (for upload)' },
+      { name: 'folderId', type: 'string', required: false, description: 'Parent folder ID', placeholder: 'root' },
+      { name: 'folderName', type: 'string', required: false, description: 'Folder name (for createFolder)', placeholder: 'New Folder' },
+      { name: 'query', type: 'string', required: false, description: 'Search query (for search/list)', placeholder: "name contains 'document'" },
+      { name: 'mimeType', type: 'string', required: false, description: 'MIME type', default: 'text/plain', placeholder: 'text/plain' },
+      { name: 'fields', type: 'string', required: false, description: 'Fields to return', default: 'id, name, webViewLink, mimeType' },
+    ],
+    outputs: [
+      { name: 'result', type: 'object', description: 'Operation result' },
+      { name: 'files', type: 'array', description: 'List of files (for list/search)' },
+    ],
+  });
+
+  // Dropbox Node
+  nodeRegistry.register({
+    type: 'dropbox',
+    category: 'storage',
+    name: 'Dropbox',
+    description: 'Upload, download, list, and manage files in Dropbox',
+    executor: new DropboxNode(),
+    inputs: [
+      { name: 'accessToken', type: 'string', required: true, description: 'Dropbox access token' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['upload', 'download', 'list', 'delete', 'createFolder', 'search', 'getMetadata'] },
+      { name: 'path', type: 'string', required: false, description: 'File/folder path', placeholder: '/documents/file.txt' },
+      { name: 'content', type: 'string', required: false, description: 'File content (for upload)' },
+      { name: 'query', type: 'string', required: false, description: 'Search query (for search)', placeholder: 'document' },
+      { name: 'recursive', type: 'boolean', required: false, description: 'List recursively', default: false },
+      { name: 'mode', type: 'string', required: false, description: 'Upload mode', default: 'add', options: ['add', 'overwrite', 'update'] },
+      { name: 'autorename', type: 'boolean', required: false, description: 'Auto-rename on conflict', default: false },
+    ],
+    outputs: [
+      { name: 'result', type: 'object', description: 'Operation result' },
+      { name: 'entries', type: 'array', description: 'List of entries (for list/search)' },
+    ],
+  });
+
+  // AWS S3 Node
+  nodeRegistry.register({
+    type: 'aws-s3',
+    category: 'storage',
+    name: 'AWS S3',
+    description: 'Upload, download, list, and manage objects in Amazon S3',
+    executor: new AWSS3Node(),
+    inputs: [
+      { name: 'credentials', type: 'object', required: true, description: 'AWS credentials (accessKeyId, secretAccessKey, region)' },
+      { name: 'bucket', type: 'string', required: true, description: 'S3 bucket name', placeholder: 'my-bucket' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['upload', 'download', 'list', 'delete', 'getMetadata', 'copy'] },
+      { name: 'key', type: 'string', required: false, description: 'Object key (file path)', placeholder: 'folder/file.txt' },
+      { name: 'content', type: 'string', required: false, description: 'File content (for upload)' },
+      { name: 'contentType', type: 'string', required: false, description: 'Content type', default: 'text/plain', placeholder: 'text/plain' },
+      { name: 'prefix', type: 'string', required: false, description: 'Prefix for listing', placeholder: 'folder/' },
+      { name: 'maxKeys', type: 'number', required: false, description: 'Max objects to list', default: 1000 },
+      { name: 'sourceBucket', type: 'string', required: false, description: 'Source bucket (for copy)', placeholder: 'source-bucket' },
+      { name: 'sourceKey', type: 'string', required: false, description: 'Source key (for copy)', placeholder: 'source/file.txt' },
+      { name: 'acl', type: 'string', required: false, description: 'Access control', default: 'private', options: ['private', 'public-read', 'public-read-write', 'authenticated-read'] },
+    ],
+    outputs: [
+      { name: 'result', type: 'object', description: 'Operation result' },
+      { name: 'objects', type: 'array', description: 'List of objects (for list)' },
+    ],
+  });
+
+  // Azure Blob Storage Node
+  nodeRegistry.register({
+    type: 'azure-blob',
+    category: 'storage',
+    name: 'Azure Blob Storage',
+    description: 'Upload, download, list, and manage blobs in Azure Storage',
+    executor: new AzureBlobNode(),
+    inputs: [
+      { name: 'connectionString', type: 'string', required: true, description: 'Azure Storage connection string' },
+      { name: 'container', type: 'string', required: true, description: 'Container name', placeholder: 'my-container' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['upload', 'download', 'list', 'delete', 'getMetadata', 'copy'] },
+      { name: 'blobName', type: 'string', required: false, description: 'Blob name (file path)', placeholder: 'folder/file.txt' },
+      { name: 'content', type: 'string', required: false, description: 'Blob content (for upload)' },
+      { name: 'contentType', type: 'string', required: false, description: 'Content type', default: 'text/plain', placeholder: 'text/plain' },
+      { name: 'prefix', type: 'string', required: false, description: 'Prefix for listing', placeholder: 'folder/' },
+      { name: 'maxResults', type: 'number', required: false, description: 'Max blobs to list', default: 1000 },
+      { name: 'sourceContainer', type: 'string', required: false, description: 'Source container (for copy)', placeholder: 'source-container' },
+      { name: 'sourceBlobName', type: 'string', required: false, description: 'Source blob (for copy)', placeholder: 'source/file.txt' },
+      { name: 'tier', type: 'string', required: false, description: 'Access tier', options: ['Hot', 'Cool', 'Archive'] },
+    ],
+    outputs: [
+      { name: 'result', type: 'object', description: 'Operation result' },
+      { name: 'blobs', type: 'array', description: 'List of blobs (for list)' },
+    ],
+  });
+
+  // OneDrive Node
+  nodeRegistry.register({
+    type: 'onedrive',
+    category: 'storage',
+    name: 'OneDrive',
+    description: 'Upload, download, list, and manage files in Microsoft OneDrive',
+    executor: new OneDriveNode(),
+    inputs: [
+      { name: 'accessToken', type: 'string', required: true, description: 'Microsoft Graph API access token' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['upload', 'download', 'list', 'delete', 'createFolder', 'search', 'getMetadata'] },
+      { name: 'path', type: 'string', required: false, description: 'File/folder path', placeholder: '/documents/file.txt' },
+      { name: 'itemId', type: 'string', required: false, description: 'Item ID (alternative to path)', placeholder: '01ABC...XYZ' },
+      { name: 'content', type: 'string', required: false, description: 'File content (for upload)' },
+      { name: 'folderId', type: 'string', required: false, description: 'Parent folder ID', placeholder: 'root' },
+      { name: 'query', type: 'string', required: false, description: 'Search query (for search)', placeholder: 'document' },
+      { name: 'conflictBehavior', type: 'string', required: false, description: 'Conflict behavior', default: 'rename', options: ['rename', 'replace', 'fail'] },
+    ],
+    outputs: [
+      { name: 'result', type: 'object', description: 'Operation result' },
+      { name: 'items', type: 'array', description: 'List of items (for list/search)' },
+    ],
+  });
+
+  // Box Node
+  nodeRegistry.register({
+    type: 'box',
+    category: 'storage',
+    name: 'Box',
+    description: 'Upload, download, list, and manage files in Box',
+    executor: new BoxNode(),
+    inputs: [
+      { name: 'accessToken', type: 'string', required: true, description: 'Box access token' },
+      { name: 'operation', type: 'string', required: true, description: 'Operation type', default: 'list', options: ['upload', 'download', 'list', 'delete', 'createFolder', 'search', 'getMetadata', 'copy', 'move'] },
+      { name: 'folderId', type: 'string', required: false, description: 'Folder ID (0 = root)', default: '0', placeholder: '0' },
+      { name: 'fileId', type: 'string', required: false, description: 'File ID', placeholder: '123456789' },
+      { name: 'fileName', type: 'string', required: false, description: 'File/folder name', placeholder: 'document.txt' },
+      { name: 'content', type: 'string', required: false, description: 'File content (for upload)' },
+      { name: 'query', type: 'string', required: false, description: 'Search query (for search)', placeholder: 'document' },
+      { name: 'destinationFolderId', type: 'string', required: false, description: 'Destination folder (for copy/move)', placeholder: '987654321' },
+      { name: 'fields', type: 'array', required: false, description: 'Fields to return', default: ['id', 'name', 'type', 'size'] },
+    ],
+    outputs: [
+      { name: 'result', type: 'object', description: 'Operation result' },
+      { name: 'items', type: 'array', description: 'List of items (for list/search)' },
+    ],
+  });
+
   console.log(`\n📦 Registered ${nodeRegistry.getAllNodes().length} workflow nodes`);
 }
 
@@ -305,4 +462,11 @@ export {
   DiscordNode,
   WebhookNode,
   SMSNode,
+  // Cloud Storage Nodes
+  GoogleDriveNode,
+  DropboxNode,
+  AWSS3Node,
+  AzureBlobNode,
+  OneDriveNode,
+  BoxNode,
 };

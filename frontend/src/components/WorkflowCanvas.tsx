@@ -34,8 +34,8 @@ export default function WorkflowCanvas() {
       position: node.position,
       data: {
         label: node.name,
-        type: node.data.service,
-        parameters: node.data.parameters,
+        type: node.data?.service || 'unknown',
+        parameters: node.data?.parameters || {},
       },
     }));
     setNodesState(flowNodes);

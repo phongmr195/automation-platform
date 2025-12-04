@@ -38,7 +38,14 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   
   setWorkflow: (workflow) => set({
     workflow,
-    nodes: workflow?.nodes || [],
+    nodes: workflow?.nodes?.map(node => ({
+      ...node,
+      data: node.data || {
+        service: 'unknown',
+        operation: 'execute',
+        parameters: {},
+      }
+    })) || [],
     connections: workflow?.connections || [],
     selectedNodeId: null,
   }),
