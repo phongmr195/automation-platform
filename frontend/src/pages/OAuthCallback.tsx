@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '../utils/alerts';
@@ -7,9 +7,13 @@ export default function OAuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const hasHandledCallback = useRef(false);
   
   useEffect(() => {
     const handleCallback = async () => {
+      // Prevent duplicate execution in StrictMode
+      if (hasHandledCallback.current) return;
+      hasHandledCallback.current = true;
       const accessToken = searchParams.get('accessToken');
       const refreshToken = searchParams.get('refreshToken');
       const error = searchParams.get('error');

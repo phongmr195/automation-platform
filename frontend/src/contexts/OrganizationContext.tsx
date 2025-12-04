@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { organizationApi } from '../services/organizationApi';
 import type { Organization } from '../services/organizationApi';
@@ -24,7 +24,7 @@ export function OrganizationProvider({ children }: Readonly<{ children: ReactNod
   const [error, setError] = useState<string | null>(null);
 
   // Load organizations when user is authenticated
-  const fetchOrganizations = async () => {
+  const fetchOrganizations = useCallback(async () => {
     if (!user) {
       setOrganizations([]);
       setCurrentOrganization(null);
@@ -59,26 +59,26 @@ export function OrganizationProvider({ children }: Readonly<{ children: ReactNod
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   // Fetch on mount and when user changes
   useEffect(() => {
     fetchOrganizations();
-  }, [user]);
+  }, [fetchOrganizations]);
 
   // Switch organization
-  const switchOrganization = (organizationId: string) => {
+  const switchOrganization = useCallback((organizationId: string) => {
     const org = organizations.find(o => o.id === organizationId);
     if (org) {
       setCurrentOrganization(org);
       localStorage.setItem('currentOrganizationId', organizationId);
     }
-  };
+  }, [organizations]);
 
   // Refresh organizations list
-  const refreshOrganizations = async () => {
+  const refreshOrganizations = useCallback(async () => {
     await fetchOrganizations();
-  };
+  }, [fetchOrganizations]);
 
   const value = useMemo(
     () => ({
@@ -90,7 +90,7 @@ export function OrganizationProvider({ children }: Readonly<{ children: ReactNod
       refreshOrganizations,
       switchOrganization,
     }),
-    [currentOrganization, organizations, loading, error]
+    [currentOrganization, organizations, loading, error, refreshOrganizations, switchOrganization]
   );
 
   return (

@@ -15,6 +15,7 @@ import OAuthCallback from './pages/OAuthCallback';
 import { CreateOrganization } from './pages/CreateOrganization';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 
+// Create QueryClient OUTSIDE component to prevent re-creation on every render
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

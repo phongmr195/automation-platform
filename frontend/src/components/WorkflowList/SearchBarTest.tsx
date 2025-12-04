@@ -1,51 +1,46 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useRef } from "react";
 import { Search, X } from "lucide-react";
 
-interface SearchBarProps {
+interface SearchBarTestProps {
   onSearch: (query: string) => void;
   placeholder?: string;
 }
 
-export const SearchBar = memo(function SearchBar({
+// Completely isolated test version - NO memo, NO debounce
+export function SearchBarTest({
   onSearch,
   placeholder = "Search workflows...",
-}: SearchBarProps) {
-  const [localQuery, setLocalQuery] = useState("");
-  const onSearchRef = useRef(onSearch);
-
-  // Update ref when onSearch changes
-  useEffect(() => {
-    onSearchRef.current = onSearch;
-  }, [onSearch]);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onSearchRef.current(localQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [localQuery]);
+}: SearchBarTestProps) {
+  const [query, setQuery] = useState("");
+  const renderCount = useRef(0);
+  renderCount.current++;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalQuery(e.target.value);
+    const value = e.target.value;
+    console.log(`[${renderCount.current}] SearchBarTest handleChange:`, value);
+    setQuery(value);
+    onSearch(value); // Direct call, no debounce
   };
 
   const handleClear = () => {
-    setLocalQuery("");
+    setQuery("");
+    onSearch("");
   };
+
+  console.log(`[${renderCount.current}] SearchBarTest RENDER, query:`, query);
 
   return (
     <div className="relative w-full max-w-md">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
       <input
         type="text"
-        value={localQuery}
+        value={query}
         onChange={handleChange}
         placeholder={placeholder}
         className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         autoComplete="off"
       />
-      {localQuery && (
+      {query && (
         <button
           type="button"
           onClick={handleClear}
@@ -57,4 +52,4 @@ export const SearchBar = memo(function SearchBar({
       )}
     </div>
   );
-});
+}

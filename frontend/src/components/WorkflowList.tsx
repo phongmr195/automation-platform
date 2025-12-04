@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { workflowApi } from "../services/api";
 import { Plus } from "lucide-react";
@@ -24,32 +24,47 @@ export default function WorkflowList() {
   const [page, setPage] = useState(1);
   const limit = 12;
 
-  // Build query parameters
-  const queryParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-    sort: sortBy,
-    order,
-  });
+  // Stable callback for search
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
 
-  if (search) queryParams.append("search", search);
-  if (status !== "all") queryParams.append("status", status);
+  // Build query parameters with useMemo to prevent unnecessary re-renders
+  const queryKey = useMemo(
+    () => ["workflows", search, status, sortBy, order, page],
+    [search, status, sortBy, order, page]
+  );
+
+  const queryString = useMemo(() => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sort: sortBy,
+      order,
+    });
+    if (search) params.append("search", search);
+    if (status !== "all") params.append("status", status);
+    return params.toString();
+  }, [search, status, sortBy, order, page]);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["workflows", queryParams.toString()],
+    queryKey,
     queryFn: async () => {
       const response = await fetch(
-        `http://localhost:3000/workflows?${queryParams}`
+        `http://localhost:3000/workflows?${queryString}`
       );
       if (!response.ok) throw new Error("Failed to fetch workflows");
       return response.json();
     },
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    staleTime: 30000,
   });
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters change (NOT search - search already handled by queryKey)
   useEffect(() => {
     setPage(1);
-  }, [search, status, sortBy, order]);
+  }, [status, sortBy, order]); // Removed 'search' from dependencies!
 
   const handleDelete = async (id: string, name: string) => {
     const confirmed = await confirm({
@@ -79,13 +94,14 @@ export default function WorkflowList() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading workflows...</div>
-      </div>
-    );
-  }
+  // Don't unmount the entire UI when loading - just show indicator
+  // if (isLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  //       <div className="text-gray-500">Loading workflows...</div>
+  //     </div>
+  //   );
+  // }
 
   const workflows = data?.workflows || [];
   const pagination = data?.pagination || {
@@ -119,7 +135,7 @@ export default function WorkflowList() {
           {/* Search and Filters */}
           <div className="mt-6 flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <SearchBar onSearch={setSearch} />
+              <SearchBar onSearch={handleSearchChange} />
             </div>
             <FilterPanel
               filters={{

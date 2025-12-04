@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 
 interface User {
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   }, []);
 
   // Fetch current user info
-  const fetchCurrentUser = async (accessToken: string) => {
+  const fetchCurrentUser = useCallback(async (accessToken: string) => {
     try {
       const response = await axios.get(`${API_URL}/auth/me`, {
         headers: {
@@ -65,10 +65,10 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Register new user
-  const register = async (email: string, password: string, name?: string) => {
+  const register = useCallback(async (email: string, password: string, name?: string) => {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, {
         email,
@@ -87,10 +87,10 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       }
       throw new Error('Registration failed. Please try again.');
     }
-  };
+  }, []);
 
   // Login user
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
       const response = await axios.post(`${API_URL}/auth/login`, {
         email,
@@ -108,10 +108,10 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       }
       throw new Error('Login failed. Please check your credentials.');
     }
-  };
+  }, []);
 
   // Logout user
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       if (tokens?.refreshToken && tokens?.accessToken) {
         await axios.post(
@@ -131,15 +131,15 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       setTokens(null);
       localStorage.removeItem('authTokens');
     }
-  };
+  }, [tokens]);
 
   // Helper to set tokens from OAuth callback
-  const setTokensHelper = (accessToken: string, refreshToken: string) => {
+  const setTokensHelper = useCallback((accessToken: string, refreshToken: string) => {
     const newTokens = { accessToken, refreshToken };
     setTokens(newTokens);
     localStorage.setItem('authTokens', JSON.stringify(newTokens));
     fetchCurrentUser(accessToken);
-  };
+  }, [fetchCurrentUser]);
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -153,7 +153,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       setUser,
       setTokens: setTokensHelper,
     }),
-    [user, tokens, loading]
+    [user, tokens, loading, login, register, logout, setTokensHelper]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

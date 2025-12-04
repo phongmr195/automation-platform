@@ -40,10 +40,17 @@ app.get('/google/callback', async (c) => {
     const code = c.req.query('code');
     const error = c.req.query('error');
     
+    console.log('=== Google OAuth Callback ===');
+    console.log('Code:', code ? 'received' : 'missing');
+    console.log('Error:', error);
+    
     if (error || !code) {
       console.error('Google OAuth error:', error);
       return c.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
     }
+    
+    console.log('Exchanging code for tokens...');
+    console.log('Redirect URI:', process.env.GOOGLE_CALLBACK_URL);
     
     // Exchange code for tokens
     const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
@@ -55,6 +62,7 @@ app.get('/google/callback', async (c) => {
     });
     
     const { access_token } = tokenResponse.data;
+    console.log('✅ Token received, fetching user profile...');
     
     // Get user profile
     const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -62,6 +70,7 @@ app.get('/google/callback', async (c) => {
     });
     
     const { id, email, name, picture } = profileResponse.data;
+    console.log('✅ User profile:', email);
     
     // Create or update user
     const profile: OAuthProfile = {
@@ -73,7 +82,10 @@ app.get('/google/callback', async (c) => {
     };
     
     const user = await oauthService.findOrCreateUser(profile);
+    console.log('✅ User created/found:', user.id);
+    
     const tokens = await oauthService.generateTokens(user.id);
+    console.log('✅ Tokens generated, redirecting to frontend...');
     
     // Redirect to frontend with tokens
     const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?${new URLSearchParams({
@@ -83,7 +95,8 @@ app.get('/google/callback', async (c) => {
     
     return c.redirect(redirectUrl);
   } catch (error: any) {
-    console.error('Google OAuth error:', error.response?.data || error.message);
+    console.error('❌ Google OAuth error:', error.response?.data || error.message);
+    console.error('Error stack:', error.stack);
     return c.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
   }
 });
@@ -187,7 +200,7 @@ app.get('/github/callback', async (c) => {
 app.get('/linkedin', (c) => {
   const clientId = process.env.LINKEDIN_CLIENT_ID;
   const redirectUri = process.env.LINKEDIN_CALLBACK_URL;
-  const scope = 'r_liteprofile r_emailaddress';
+  const scope = 'openid profile email';
   
   if (!clientId || !redirectUri) {
     return c.json({ error: 'LinkedIn OAuth not configured' }, 500);
@@ -230,21 +243,12 @@ app.get('/linkedin/callback', async (c) => {
     
     const { access_token } = tokenResponse.data;
     
-    // Get user profile
-    const profileResponse = await axios.get('https://api.linkedin.com/v2/me', {
+    // Get user profile using OpenID Connect userinfo endpoint
+    const profileResponse = await axios.get('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
     
-    // Get email
-    const emailResponse = await axios.get(
-      'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
-      {
-        headers: { Authorization: `Bearer ${access_token}` },
-      }
-    );
-    
-    const email = emailResponse.data.elements?.[0]?.['handle~']?.emailAddress;
-    const { id, localizedFirstName, localizedLastName } = profileResponse.data;
+    const { sub, email, name, given_name, family_name } = profileResponse.data;
     
     if (!email) {
       console.error('LinkedIn: No email found');
@@ -253,9 +257,9 @@ app.get('/linkedin/callback', async (c) => {
     
     const profile: OAuthProfile = {
       provider: 'linkedin',
-      providerId: id,
+      providerId: sub,
       email,
-      name: `${localizedFirstName} ${localizedLastName}`,
+      name: name || `${given_name} ${family_name}`,
     };
     
     const user = await oauthService.findOrCreateUser(profile);
