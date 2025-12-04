@@ -120,9 +120,19 @@ export class AlertsAPI {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    // Get token from localStorage if not set
+    let token = this.token;
+    if (!token) {
+      const authTokens = localStorage.getItem('authTokens');
+      if (authTokens) {
+        const parsedTokens = JSON.parse(authTokens);
+        token = parsedTokens.accessToken;
+      }
+    }
+    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     };
 
@@ -153,14 +163,14 @@ export class AlertsAPI {
     const query = new URLSearchParams({ organizationId: params.organizationId });
     if (params.workflowId) query.append('workflowId', params.workflowId);
 
-    return this.request<AlertRule[]>(`/api/alerts/rules?${query.toString()}`);
+    return this.request<AlertRule[]>(`/alerts/rules?${query.toString()}`);
   }
 
   /**
    * Create a new alert rule
    */
   async createRule(input: CreateRuleInput): Promise<AlertRule> {
-    return this.request<AlertRule>('/api/alerts/rules', {
+    return this.request<AlertRule>('/alerts/rules', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -175,7 +185,7 @@ export class AlertsAPI {
     updates: Partial<CreateRuleInput>
   ): Promise<AlertRule> {
     const query = new URLSearchParams({ organizationId });
-    return this.request<AlertRule>(`/api/alerts/rules/${ruleId}?${query.toString()}`, {
+    return this.request<AlertRule>(`/alerts/rules/${ruleId}?${query.toString()}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -187,7 +197,7 @@ export class AlertsAPI {
   async deleteRule(ruleId: string, organizationId: string): Promise<void> {
     const query = new URLSearchParams({ organizationId });
     await this.request<{ success: boolean }>(
-      `/api/alerts/rules/${ruleId}?${query.toString()}`,
+      `/alerts/rules/${ruleId}?${query.toString()}`,
       { method: 'DELETE' }
     );
   }
@@ -206,14 +216,14 @@ export class AlertsAPI {
     const query = new URLSearchParams({ organizationId: params.organizationId });
     if (params.type) query.append('type', params.type);
 
-    return this.request<AlertChannel[]>(`/api/alerts/channels?${query.toString()}`);
+    return this.request<AlertChannel[]>(`/alerts/channels?${query.toString()}`);
   }
 
   /**
    * Create a new alert channel
    */
   async createChannel(input: CreateChannelInput): Promise<AlertChannel> {
-    return this.request<AlertChannel>('/api/alerts/channels', {
+    return this.request<AlertChannel>('/alerts/channels', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -229,7 +239,7 @@ export class AlertsAPI {
   ): Promise<AlertChannel> {
     const query = new URLSearchParams({ organizationId });
     return this.request<AlertChannel>(
-      `/api/alerts/channels/${channelId}?${query.toString()}`,
+      `/alerts/channels/${channelId}?${query.toString()}`,
       {
         method: 'PUT',
         body: JSON.stringify(updates),
@@ -243,7 +253,7 @@ export class AlertsAPI {
   async deleteChannel(channelId: string, organizationId: string): Promise<void> {
     const query = new URLSearchParams({ organizationId });
     await this.request<{ success: boolean}>(
-      `/api/alerts/channels/${channelId}?${query.toString()}`,
+      `/alerts/channels/${channelId}?${query.toString()}`,
       { method: 'DELETE' }
     );
   }
@@ -254,7 +264,7 @@ export class AlertsAPI {
   async testChannel(channelId: string, organizationId: string): Promise<boolean> {
     const query = new URLSearchParams({ organizationId });
     const result = await this.request<{ success: boolean }>(
-      `/api/alerts/channels/${channelId}/test?${query.toString()}`,
+      `/alerts/channels/${channelId}/test?${query.toString()}`,
       { method: 'POST' }
     );
     return result.success;
@@ -282,14 +292,14 @@ export class AlertsAPI {
     if (params.startDate) query.append('startDate', params.startDate.toISOString());
     if (params.endDate) query.append('endDate', params.endDate.toISOString());
 
-    return this.request<AlertHistory[]>(`/api/alerts/history?${query.toString()}`);
+    return this.request<AlertHistory[]>(`/alerts/history?${query.toString()}`);
   }
 
   /**
    * Acknowledge an alert
    */
   async acknowledgeAlert(alertId: string): Promise<AlertHistory> {
-    return this.request<AlertHistory>(`/api/alerts/history/${alertId}/acknowledge`, {
+    return this.request<AlertHistory>(`/alerts/history/${alertId}/acknowledge`, {
       method: 'POST',
     });
   }
@@ -305,7 +315,7 @@ export class AlertsAPI {
     message: string;
     details?: any;
   }): Promise<AlertHistory> {
-    return this.request<AlertHistory>('/api/alerts/trigger', {
+    return this.request<AlertHistory>('/alerts/trigger', {
       method: 'POST',
       body: JSON.stringify(params),
     });
