@@ -437,19 +437,19 @@ n8n có ~400+ integrations. Chúng ta cần ít nhất 50-100 nodes phổ biến
 ✅ Import/Export (JSON)      // DONE - Import/Export with validation
 ```
 
-#### 2.2 Visual Editor Enhancements
+#### 2.2 Visual Editor Enhancements ✅ COMPLETED (Dec 4, 2025)
 ```typescript
-✅ React Flow canvas       // DONE
-✅ Drag-and-drop           // DONE
-⬜ Zoom controls
-⬜ Mini-map
-⬜ Node search in canvas
-⬜ Sticky notes/comments
+✅ React Flow canvas       // DONE - Already implemented
+✅ Drag-and-drop           // DONE - Already implemented
+✅ Zoom controls            // DONE - React Flow Controls component
+✅ Mini-map                 // DONE - React Flow MiniMap (zoomable, pannable)
+✅ Node search in canvas    // DONE - NodeSearchPanel with ⌘K shortcut
+✅ Sticky notes/comments    // DONE - StickyNoteNode component with colors
+✅ Connection labels        // DONE - Edge labels with labelStyle
+✅ Keyboard shortcuts       // DONE - useKeyboardShortcuts hook (⌘K, ⌘Z, ⌘N, ⌘L, etc.)
+✅ Undo/Redo                // DONE - History store with ⌘Z and ⌘⇧Z
+✅ Auto-layout              // DONE - Dagre-based auto-layout with ⌘L
 ⬜ Node grouping
-⬜ Connection labels
-⬜ Keyboard shortcuts
-⬜ Undo/Redo
-⬜ Auto-layout
 ```
 
 #### 2.3 Execution Features

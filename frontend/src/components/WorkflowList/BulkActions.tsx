@@ -1,4 +1,4 @@
-import { Trash2, Play, Archive, Copy, Download } from 'lucide-react';
+import { Trash2, Play, Copy, Download } from 'lucide-react';
 
 interface BulkActionsProps {
   selectedCount: number;

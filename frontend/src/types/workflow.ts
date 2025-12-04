@@ -22,6 +22,7 @@ export interface NodeConnection {
   target: string;
   sourceOutput?: string;
   targetInput?: string;
+  label?: string;
 }
 
 export interface WorkflowTrigger {
