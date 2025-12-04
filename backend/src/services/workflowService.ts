@@ -70,7 +70,15 @@ export class WorkflowService {
     triggers?: any[];
     settings?: any;
     active?: boolean;
+    organizationId?: string;
+    ownerId?: string;
   }): Promise<Workflow> {
+    // Prepare workflow definition for versioning
+    const definition = {
+      nodes: data.nodes || [],
+      edges: data.connections || [],
+    };
+
     const workflow = await prisma.workflow.create({
       data: {
         id: data.id || `wf_${Date.now()}`,
@@ -81,6 +89,16 @@ export class WorkflowService {
         triggers: data.triggers || [],
         settings: data.settings || {},
         active: data.active !== undefined ? data.active : false,
+        organizationId: data.organizationId,
+        ownerId: data.ownerId,
+        // Create initial version
+        versions: {
+          create: {
+            versionNumber: 1,
+            definition: definition,
+            isDraft: true,
+          },
+        },
       },
     });
 
@@ -110,6 +128,18 @@ export class WorkflowService {
     settings?: any;
     active?: boolean;
   }): Promise<Workflow> {
+    // Get the latest version number
+    const latestVersion = await prisma.workflowVersion.findFirst({
+      where: { workflowId: id },
+      orderBy: { versionNumber: 'desc' },
+    });
+
+    // Prepare workflow definition for versioning
+    const definition = {
+      nodes: data.nodes || [],
+      edges: data.connections || [],
+    };
+
     const workflow = await prisma.workflow.update({
       where: { id },
       data: {
@@ -121,6 +151,14 @@ export class WorkflowService {
         settings: data.settings,
         active: data.active,
         updatedAt: new Date(),
+        // Create new version on update
+        versions: {
+          create: {
+            versionNumber: (latestVersion?.versionNumber ?? 0) + 1,
+            definition: definition,
+            isDraft: true,
+          },
+        },
       },
     });
 

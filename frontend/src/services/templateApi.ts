@@ -111,6 +111,7 @@ export const templateApi = {
       name: string;
       description?: string;
       organizationId: string;
+      userId: string;
       parameterValues?: Record<string, any>;
     }
   ): Promise<{ workflowId: string }> {

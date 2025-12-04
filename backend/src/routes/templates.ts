@@ -198,6 +198,11 @@ app.post('/:id/install', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json();
 
+    // Validate required fields
+    if (!body.name || !body.organizationId) {
+      return c.json({ error: 'Name and organizationId are required' }, 400);
+    }
+
     // Get template
     const template = await templateService.getTemplateById(id);
     if (!template) {
@@ -206,14 +211,14 @@ app.post('/:id/install', async (c) => {
 
     // Create workflow from template
     const workflowData = {
-      name: body.name || template.name,
+      name: body.name,
       description: body.description || template.description,
-      nodes: template.nodes,
-      connections: template.connections,
-      triggers: template.triggers || [],
-      settings: template.settings,
+      nodes: template.nodes as any[],
+      connections: template.connections as any[],
+      triggers: template.triggers as any[],
+      settings: (template.settings as any) || {},
       organizationId: body.organizationId,
-      ownerId: body.userId,
+      ownerId: body.userId, // User ID from request body
       active: false,
     };
 
@@ -223,6 +228,7 @@ app.post('/:id/install', async (c) => {
     await templateService.incrementInstallCount(id);
 
     return c.json({
+      workflowId: workflow.id,
       workflow,
       template: {
         id: template.id,

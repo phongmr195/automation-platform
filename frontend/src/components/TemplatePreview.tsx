@@ -4,6 +4,7 @@ import { ReactFlow, Background, Controls, MiniMap } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { templateApi } from '../services/templateApi';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import type { WorkflowTemplate } from '../types/workflow';
 
@@ -15,6 +16,7 @@ interface TemplatePreviewProps {
 export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onClose }) => {
   const navigate = useNavigate();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [workflowName, setWorkflowName] = useState(template.name);
   const [workflowDescription, setWorkflowDescription] = useState(template.description);
@@ -46,15 +48,17 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onCl
   const installMutation = useMutation({
     mutationFn: async () => {
       if (!currentOrganization) throw new Error('No organization selected');
+      if (!user) throw new Error('User not authenticated');
 
       return templateApi.installTemplate(template.id, {
         name: workflowName,
         description: workflowDescription,
         organizationId: currentOrganization.id,
+        userId: user.id,
       });
     },
     onSuccess: (data) => {
-      navigate(`/workflows/${data.workflowId}`);
+      navigate(`/editor/${data.workflowId}`);
     },
   });
 
@@ -239,13 +243,21 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onCl
             >
               Cancel
             </button>
-            <button
-              onClick={handleInstall}
-              disabled={!currentOrganization || installMutation.isPending}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {installMutation.isPending ? 'Installing...' : '📥 Install Template'}
-            </button>
+            <div className="flex flex-col items-end">
+              {!currentOrganization && (
+                <p className="text-sm text-red-600 mb-2">
+                  ⚠️ Please select an organization first
+                </p>
+              )}
+              <button
+                onClick={handleInstall}
+                disabled={!currentOrganization || installMutation.isPending}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                title={!currentOrganization ? 'Please select an organization first' : ''}
+              >
+                {installMutation.isPending ? 'Installing...' : '📥 Install Template'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
