@@ -22,6 +22,8 @@ interface AuthContextType {
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  setUser: (user: User | null) => void;
+  setTokens: (tokens: AuthTokens | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -140,6 +142,8 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       register,
       logout,
       isAuthenticated: !!user && !!tokens,
+      setUser,
+      setTokens,
     }),
     [user, tokens, loading]
   );

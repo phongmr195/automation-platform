@@ -11,6 +11,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OAuthCallback from './pages/OAuthCallback';
 import { CreateOrganization } from './pages/CreateOrganization';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 
@@ -35,6 +36,7 @@ export default function App() {
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/auth/callback" element={<OAuthCallback />} />
                 
                 {/* Protected Routes */}
                 <Route

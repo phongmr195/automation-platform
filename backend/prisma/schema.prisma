@@ -13,11 +13,17 @@ generator client {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // bcrypt hashed
+  password  String?  // bcrypt hashed (nullable for OAuth-only users)
   name      String?
+  avatar    String?  // Profile picture URL
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // OAuth provider IDs
+  googleId   String? @unique
+  githubId   String? @unique
+  linkedinId String? @unique
 
   sessions    Session[]
   workflows   Workflow[]

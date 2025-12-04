@@ -587,7 +587,7 @@ n8n có ~400+ integrations. Chúng ta cần ít nhất 50-100 nodes phổ biến
 ```typescript
 ✅ Credential encryption   // DONE
 ✅ JWT authentication      // DONE
-⬜ OAuth2 integration
+✅ OAuth2 integration      // DONE (Google, GitHub, LinkedIn) - Dec 4, 2025
 ⬜ SAML SSO
 ⬜ 2FA/MFA
 ⬜ IP whitelisting
