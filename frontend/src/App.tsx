@@ -43,7 +43,7 @@ export default function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/auth/callback" element={<OAuthCallback />} />
-                  
+
                   {/* Protected Routes */}
                   <Route
                     path="/"

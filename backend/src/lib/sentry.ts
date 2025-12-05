@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { ErrorTrackingService } from '../services/monitoringService';
 import { AlertSeverity } from '@prisma/client';
+import { sentryTelegramService } from '../services/sentryTelegramService';
 
 // Try to import profiling, but make it optional
 let nodeProfilingIntegration: any = null;
@@ -43,22 +44,25 @@ export function initSentry() {
     
     integrations,
 
-    // Before send hook to also log to our database
+    // Before send hook to also log to our database and Telegram
     beforeSend(event, hint) {
       const error = hint.originalException as Error;
       
-      // Also log to our database
+      // Also log to our database (which will trigger Telegram notification)
       if (error) {
+        const severity = determineSeverity(event.level);
+        
         ErrorTrackingService.logError({
           errorType: error.name || 'Error',
           errorCode: (error as any).code,
-          severity: determineSeverity(event.level),
+          severity,
           message: error.message,
           stack: error.stack,
           metadata: {
             eventId: event.event_id,
             tags: event.tags,
             extra: event.extra,
+            sentryUrl: event.event_id ? `https://sentry.io/issues/?query=${event.event_id}` : undefined,
           },
         }).catch(err => {
           console.error('Failed to log error to database:', err);

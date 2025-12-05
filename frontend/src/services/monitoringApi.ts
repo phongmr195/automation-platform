@@ -434,3 +434,35 @@ export const getExecutionTraces = async (executionId: string): Promise<APMTrace[
   return response.data.data;
 };
 
+// Export all monitoring API functions as a single object
+export const monitoringApi = {
+  // Health Check
+  getSystemHealth,
+  getComponentHealth,
+  
+  // Uptime Monitoring
+  createMonitor,
+  getMonitors,
+  getMonitorStats,
+  performManualCheck,
+  acknowledgeIncident,
+  resolveIncident,
+  
+  // Performance Metrics
+  recordMetric,
+  getMetrics,
+  getAggregatedMetrics,
+  
+  // Error Tracking
+  logError,
+  getErrors,
+  getErrorStats,
+  resolveError,
+  
+  // APM Traces
+  startTrace,
+  endTrace,
+  getTrace,
+  getExecutionTraces,
+};
+

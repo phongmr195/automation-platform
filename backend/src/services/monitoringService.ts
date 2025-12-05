@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as http from 'http';
 import * as https from 'https';
 import { URL } from 'url';
+import { sentryTelegramService } from './sentryTelegramService';
 
 // -------------------------------------------------------
 // HEALTH CHECK SERVICE
@@ -763,7 +764,7 @@ export class ErrorTrackingService {
     }
 
     // Create new error log
-    return db.errorLog.create({
+    const errorLog = await db.errorLog.create({
       data: {
         errorType: input.errorType,
         errorCode: input.errorCode,
@@ -787,6 +788,27 @@ export class ErrorTrackingService {
         version: process.env.APP_VERSION,
       },
     });
+
+    // Send to Telegram if enabled and severity is ERROR or CRITICAL
+    if (input.severity === 'ERROR' || input.severity === 'CRITICAL') {
+      sentryTelegramService.sendErrorNotification({
+        errorType: input.errorType,
+        message: input.message,
+        severity: input.severity,
+        stack: input.stack,
+        workflowId: input.workflowId,
+        executionId: input.executionId,
+        userId: input.userId,
+        environment: process.env.NODE_ENV || 'development',
+        dashboardUrl: `${process.env.APP_URL || 'http://localhost:5173'}/monitoring`,
+        occurrences: 1,
+        firstSeenAt: errorLog.firstSeenAt,
+      }).catch(err => {
+        console.error('Failed to send Telegram notification:', err);
+      });
+    }
+
+    return errorLog;
   }
 
   /**

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
+import { setUserContext, clearUserContext } from '../lib/sentry';
 
 interface User {
   id: string;
@@ -81,6 +82,9 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       setUser(newUser);
       setTokens(newTokens);
       localStorage.setItem('authTokens', JSON.stringify(newTokens));
+      
+      // Set user context for error tracking
+      setUserContext(newUser);
     } catch (error: any) {
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
@@ -102,6 +106,9 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       setUser(loggedInUser);
       setTokens(newTokens);
       localStorage.setItem('authTokens', JSON.stringify(newTokens));
+      
+      // Set user context for error tracking
+      setUserContext(loggedInUser);
     } catch (error: any) {
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
@@ -130,6 +137,9 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
       setUser(null);
       setTokens(null);
       localStorage.removeItem('authTokens');
+      
+      // Clear user context from error tracking
+      clearUserContext();
     }
   }, [tokens]);
 

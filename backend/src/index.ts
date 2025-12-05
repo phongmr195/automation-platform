@@ -3,8 +3,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Initialize Sentry (must be before other imports)
-import { initSentry, captureException } from "./lib/sentry";
-initSentry();
+// import { initSentry, captureException } from "./lib/sentry";
+// initSentry();
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -74,7 +74,7 @@ app.route("/marketplace", marketplaceRoutes);
 app.route("/custom-nodes", customNodesRoutes);
 app.route("/analytics", analyticsRoutes);
 app.route("/alerts", alertsRoutes);
-app.route("/monitoring", monitoringRoutes);
+app.route("/monitoring", monitoringRoutes); // Error logging endpoint - no auth required
 
 // Health check
 app.get("/", (c) => c.text("Automation Platform API"));
@@ -84,15 +84,15 @@ app.onError((err, c) => {
   console.error('Unhandled error:', err);
   
   // Capture exception in Sentry
-  captureException(err, {
-    tags: {
-      path: c.req.path,
-      method: c.req.method,
-    },
-    extra: {
-      headers: Object.fromEntries(c.req.raw.headers.entries()),
-    },
-  });
+  // captureException(err, {
+  //   tags: {
+  //     path: c.req.path,
+  //     method: c.req.method,
+  //   },
+  //   extra: {
+  //     headers: Object.fromEntries(c.req.raw.headers.entries()),
+  //   },
+  // });
 
   return c.json({
     success: false,
@@ -132,8 +132,8 @@ process.on("SIGTERM", async () => {
   console.log("SIGTERM signal received: closing HTTP and WebSocket servers");
   HealthCheckScheduler.stop();
   await wsServer.close();
-  const { flush } = await import("./lib/sentry");
-  await flush();
+  // const { flush } = await import("./lib/sentry");
+  // await flush();
   process.exit(0);
 });
 
@@ -141,7 +141,7 @@ process.on("SIGINT", async () => {
   console.log("SIGINT signal received: closing HTTP and WebSocket servers");
   HealthCheckScheduler.stop();
   await wsServer.close();
-  const { flush } = await import("./lib/sentry");
-  await flush();
+  // const { flush } = await import("./lib/sentry");
+  // await flush();
   process.exit(0);
 });

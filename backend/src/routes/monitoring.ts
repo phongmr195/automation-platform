@@ -9,6 +9,7 @@ import {
 } from '../services/monitoringService';
 import { MetricType, AlertSeverity } from '@prisma/client';
 import { db } from '../lib/prisma';
+import { sentryTelegramService } from '../services/sentryTelegramService';
 
 const app = new Hono();
 
@@ -403,14 +404,25 @@ app.get('/metrics/:metricName/aggregated', authMiddleware, async (c) => {
 
 /**
  * POST /errors
- * Log an error
+ * Log an error (public endpoint - no auth required for frontend error tracking)
  */
-app.post('/errors', authMiddleware, async (c) => {
+app.post('/errors', async (c) => {
   try {
     const body = await c.req.json();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
-    const { userId } = c.get('user');
+    
+    // Try to get user/org from auth if available, but don't require it
+    let userId: string | undefined;
+    let organizationId: string | undefined;
+    
+    try {
+      const user = c.get('user') as any;
+      const organization = c.get('organization') as any;
+      userId = user?.userId;
+      organizationId = organization?.organizationId;
+    } catch (e) {
+      // No auth - that's ok for error logging
+      console.log('Error logging without authentication');
+    }
 
     const error = await ErrorTrackingService.logError({
       errorType: body.errorType,
@@ -431,11 +443,14 @@ app.post('/errors', authMiddleware, async (c) => {
       metadata: body.metadata,
     });
 
+    console.log('✅ Error logged successfully, sending to Telegram...');
+
     return c.json({
       success: true,
       data: error,
     }, 201);
   } catch (error: any) {
+    console.error('❌ Error logging error:', error);
     return c.json(
       {
         success: false,
@@ -687,6 +702,61 @@ app.get('/traces/execution/:executionId', authMiddleware, async (c) => {
       500
     );
   }
+});
+
+// -------------------------------------------------------
+// TELEGRAM INTEGRATION ENDPOINTS
+// -------------------------------------------------------
+
+/**
+ * GET /telegram/test
+ * Test Telegram integration
+ */
+app.get('/telegram/test', authMiddleware, async (c) => {
+  try {
+    if (!sentryTelegramService.isEnabled()) {
+      return c.json({
+        success: false,
+        error: 'Telegram integration is not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_ERROR_CHAT_ID in .env',
+      }, 400);
+    }
+
+    const sent = await sentryTelegramService.sendTestNotification();
+
+    return c.json({
+      success: sent,
+      message: sent 
+        ? 'Test notification sent to Telegram successfully!'
+        : 'Failed to send test notification',
+    });
+  } catch (error: any) {
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /telegram/status
+ * Check Telegram integration status and rate limits
+ */
+app.get('/telegram/status', authMiddleware, async (c) => {
+  const enabled = sentryTelegramService.isEnabled();
+  const rateLimitStatus = sentryTelegramService.getRateLimitStatus();
+  
+  return c.json({
+    success: true,
+    data: {
+      enabled,
+      botToken: enabled ? '***' + process.env.TELEGRAM_BOT_TOKEN?.slice(-6) : 'not set',
+      chatId: enabled ? '***' + process.env.TELEGRAM_ERROR_CHAT_ID?.slice(-4) : 'not set',
+      rateLimits: rateLimitStatus,
+    },
+  });
 });
 
 export default app;
