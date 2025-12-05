@@ -1,12 +1,23 @@
 import { X, Sparkles } from 'lucide-react';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { useConfirmDialog } from './ui/ConfirmDialog';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ExpressionEditor from './ExpressionEditor';
 import AutoCompleteInput from './AutoCompleteInput';
 import { FieldValidation, FieldValidator } from './FieldValidation';
 import TestConfigButton from './TestConfigButton';
 import SampleDataPreview from './SampleDataPreview';
+import { workflowApi } from '../services/api';
+
+interface NodeParameter {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+  placeholder?: string;
+  default?: any;
+  options?: string[];
+}
 
 // Suggested parameters for each node type
 const SUGGESTED_PARAMS: Record<string, string[]> = {
@@ -222,8 +233,64 @@ export default function NodeConfigPanel() {
   const [useExpressionEditor, setUseExpressionEditor] = useState<Record<string, boolean>>({});
   const [showValidation] = useState(true);
   const [showSampleData, setShowSampleData] = useState(false);
+  const [nodeDefinitions, setNodeDefinitions] = useState<Record<string, NodeParameter[]>>({});
+  const [definitionsLoaded, setDefinitionsLoaded] = useState(false);
   
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+
+  // Fetch node definitions on mount
+  useEffect(() => {
+    const fetchNodeDefinitions = async () => {
+      try {
+        const response = await workflowApi.getNodes();
+        const definitions: Record<string, NodeParameter[]> = {};
+        
+        response.nodes.forEach((node: any) => {
+          definitions[node.type] = node.inputs || [];
+        });
+        
+        setNodeDefinitions(definitions);
+        setDefinitionsLoaded(true);
+        console.log('Node definitions loaded:', definitions);
+      } catch (error) {
+        console.error('Failed to fetch node definitions:', error);
+        setDefinitionsLoaded(true); // Still set to true to prevent infinite loading
+      }
+    };
+    
+    fetchNodeDefinitions();
+  }, []);
+
+  // Auto-add ALL parameters (required + optional) when node is selected
+  useEffect(() => {
+    if (!selectedNode) return;
+    
+    const nodeDef = nodeDefinitions[selectedNode.data.service];
+    if (!nodeDef || nodeDef.length === 0) return;
+    
+    const currentParams = selectedNode.data.parameters || {};
+    
+    // Check if we need to initialize - only do this once when node is first created
+    const shouldInitialize = Object.keys(currentParams).length === 0;
+    
+    if (shouldInitialize) {
+      const newParams = { ...currentParams };
+      
+      // Add all parameters with their default values
+      nodeDef.forEach(param => {
+        if (!(param.name in newParams)) {
+          newParams[param.name] = param.default !== undefined ? param.default : '';
+        }
+      });
+      
+      updateNode(selectedNode.id, {
+        data: {
+          ...selectedNode.data,
+          parameters: newParams,
+        },
+      });
+    }
+  }, [selectedNode?.id, selectedNode?.data.service, nodeDefinitions]);
 
   if (!selectedNode) {
     return (
@@ -231,6 +298,17 @@ export default function NodeConfigPanel() {
         Select a node to configure
       </div>
     );
+  }
+
+  const nodeDef = nodeDefinitions[selectedNode.data.service] || [];
+  const requiredParams = nodeDef.filter(p => p.required).map(p => p.name);
+  const optionalParams = nodeDef.filter(p => !p.required).map(p => p.name);
+
+  // Debug log to check what's happening
+  if (selectedNode.data.service === 'slack') {
+    console.log('Slack node - nodeDef:', nodeDef);
+    console.log('Slack node - requiredParams:', requiredParams);
+    console.log('Slack node - optionalParams:', optionalParams);
   }
 
   const handleParameterChange = (key: string, value: string) => {
@@ -351,6 +429,12 @@ export default function NodeConfigPanel() {
                 <Sparkles className="w-3 h-3" />
                 {showSampleData ? 'Hide' : 'Preview'}
               </button>
+            </div>
+          </div>
+          
+          {/* Add Optional Parameter Dropdown */}
+          {optionalParams.length > 0 && (
+            <div className="mb-3">
               <select
                 onChange={(e) => {
                   const key = e.target.value;
@@ -361,44 +445,48 @@ export default function NodeConfigPanel() {
                       handleParameterChange(customKey, '');
                     }
                   } else if (key && !selectedNode.data.parameters[key]) {
-                    handleParameterChange(key, '');
+                    const paramDef = nodeDef.find(p => p.name === key);
+                    handleParameterChange(key, paramDef?.default || '');
                   }
                   e.target.value = ''; // Reset select
                 }}
-                className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 transition-colors cursor-pointer"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer hover:border-blue-400 transition-colors"
               >
-                <option value="">+ Add Param</option>
-                {SUGGESTED_PARAMS[selectedNode.data.service]?.map((param) => (
+                <option value="" className="text-gray-500">➕ Add Optional Parameter...</option>
+                {optionalParams.map((param) => {
+                  const paramDef = nodeDef.find(p => p.name === param);
+                  const isAdded = !!selectedNode.data.parameters[param];
+                  return (
+                    <option 
+                      key={param} 
+                      value={param}
+                      disabled={isAdded}
+                      className={isAdded ? 'text-gray-400' : 'text-gray-900'}
+                    >
+                      {isAdded ? '✓ ' : ''}{param}{paramDef?.description ? ` - ${paramDef.description.slice(0, 40)}${paramDef.description.length > 40 ? '...' : ''}` : ''}
+                    </option>
+                  );
+                })}
+                {SUGGESTED_PARAMS[selectedNode.data.service]?.filter(p => !optionalParams.includes(p) && !requiredParams.includes(p)).map((param) => (
                   <option 
                     key={param} 
                     value={param}
                     disabled={!!selectedNode.data.parameters[param]}
+                    className={selectedNode.data.parameters[param] ? 'text-gray-400' : 'text-gray-900'}
                   >
-                    {param}
+                    {selectedNode.data.parameters[param] ? '✓ ' : ''}{param}
                   </option>
-                )) || <option value="custom">Custom...</option>}
-                <option value="__custom__">➕ Custom...</option>
+                ))}
+                <option value="__custom__" className="text-blue-600 font-medium border-t">➕ Custom Parameter...</option>
               </select>
             </div>
-          </div>
+          )}
           
-          {/* Suggested Parameters */}
-          {Object.keys(selectedNode.data.parameters).length === 0 && 
-           SUGGESTED_PARAMS[selectedNode.data.service] && (
-            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <div className="text-xs font-medium text-blue-700 mb-2">
-                Suggested parameters:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {SUGGESTED_PARAMS[selectedNode.data.service].map((param) => (
-                  <button
-                    key={param}
-                    onClick={() => handleParameterChange(param, '')}
-                    className="px-2 py-1 bg-white border border-blue-300 rounded text-xs text-blue-600 hover:bg-blue-100 transition-colors"
-                  >
-                    + {param}
-                  </button>
-                ))}
+          {/* Info about required params */}
+          {requiredParams.length > 0 && (
+            <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+              <div className="text-xs text-amber-700">
+                <span className="font-medium">Required:</span> {requiredParams.join(', ')}
               </div>
             </div>
           )}
@@ -416,16 +504,41 @@ export default function NodeConfigPanel() {
           <div className="space-y-3">
             {Object.entries(selectedNode.data.parameters).map(([key, value]) => {
               const hint = PARAM_HINTS[selectedNode.data.service]?.[key];
-              const validationRules = FieldValidator.getRulesForField(selectedNode.data.service, key);
               const isExpressionField = useExpressionEditor[key];
+              const isRequired = requiredParams.includes(key);
+              const paramDef = nodeDef.find(p => p.name === key);
+              
+              // Get validation rules - use backend definition for required check
+              const baseValidationRules = FieldValidator.getRulesForField(selectedNode.data.service, key);
+              const validationRules = baseValidationRules.filter(r => {
+                // Remove hardcoded 'required' rule if backend says it's optional
+                if (r.type === 'required') {
+                  return false; // Remove all hardcoded required rules
+                }
+                return true;
+              });
+              // Add required rule from backend definition only
+              if (isRequired && definitionsLoaded) {
+                validationRules.unshift({ type: 'required', message: `${key} is required` });
+              }
+              
+              // Debug log for slack channel
+              if (selectedNode.data.service === 'slack' && key === 'channel') {
+                console.log('Channel validation:', {
+                  isRequired,
+                  requiredParams,
+                  validationRules,
+                  definitionsLoaded
+                });
+              }
               
               return (
                 <div key={key} className="relative">
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-medium text-gray-600">
                       {key}
-                      {validationRules.some(r => r.type === 'required') && (
-                        <span className="text-red-500 ml-1">*</span>
+                      {isRequired && (
+                        <span className="text-red-500 ml-1" title="Required parameter">*</span>
                       )}
                     </label>
                     <div className="flex items-center gap-1">
@@ -443,31 +556,35 @@ export default function NodeConfigPanel() {
                           {isExpressionField ? 'fx' : 'ab'}
                         </button>
                       )}
-                      <button
-                        onClick={() => {
-                          const newParams = { ...selectedNode.data.parameters };
-                          delete newParams[key];
-                          updateNode(selectedNode.id, {
-                            data: {
-                              ...selectedNode.data,
-                              parameters: newParams,
-                            },
-                          });
-                        }}
-                        className="text-red-500 hover:text-red-700 text-xs"
-                      >
-                        ✕
-                      </button>
+                      {/* Only allow deletion of optional params */}
+                      {!isRequired && (
+                        <button
+                          onClick={() => {
+                            const newParams = { ...selectedNode.data.parameters };
+                            delete newParams[key];
+                            updateNode(selectedNode.id, {
+                              data: {
+                                ...selectedNode.data,
+                                parameters: newParams,
+                              },
+                            });
+                          }}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                          title="Remove optional parameter"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </div>
-                  {hint && (
+                  {(hint?.hint || paramDef?.description) && (
                     <div className="text-xs text-gray-500 mb-1">
-                      {hint.hint}
+                      {hint?.hint || paramDef?.description}
                     </div>
                   )}
                   
                   {/* Render appropriate input based on field type */}
-                  {(key === 'operation' || key === 'method') && OPERATION_OPTIONS[selectedNode.data.service] ? (
+                  {(key === 'operation' || key === 'method') && (OPERATION_OPTIONS[selectedNode.data.service] || paramDef?.options) ? (
                     <>
                       <select
                         value={String(value)}
@@ -475,7 +592,7 @@ export default function NodeConfigPanel() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select {key}...</option>
-                        {OPERATION_OPTIONS[selectedNode.data.service].map((op) => (
+                        {(paramDef?.options || OPERATION_OPTIONS[selectedNode.data.service])?.map((op: string) => (
                           <option key={op} value={op}>
                             {op}
                           </option>

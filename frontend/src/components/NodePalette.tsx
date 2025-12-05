@@ -1,9 +1,64 @@
 import { useState } from 'react';
-import { Plus, Search, Loader2 } from 'lucide-react';
+import { Plus, Search, Loader2, Globe, MessageSquare, Mail, Send, Database, Cloud, Table, FileText, Zap, GitBranch, Code, Filter, Repeat, Webhook, Phone, Bell } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { workflowApi } from '../services/api';
 import { useWorkflowStore } from '../stores/workflowStore';
 import type { NodeDefinition } from '../types/workflow';
+
+// Icon mapping for node types
+const NODE_ICONS: Record<string, any> = {
+  // Communication
+  'email': Mail,
+  'slack': MessageSquare,
+  'discord': MessageSquare,
+  'telegram-send': Send,
+  'webhook': Webhook,
+  'sms': Phone,
+  
+  // HTTP & API
+  'http-request': Globe,
+  
+  // Storage
+  'google-drive': Cloud,
+  'dropbox': Cloud,
+  'aws-s3': Cloud,
+  'azure-blob': Cloud,
+  'onedrive': Cloud,
+  'box': Cloud,
+  
+  // Database
+  'mysql': Database,
+  'mongodb': Database,
+  'redis': Database,
+  'firebase': Database,
+  'airtable': Table,
+  
+  // Productivity
+  'google-sheets': Table,
+  'notion': FileText,
+  'trello': Table,
+  
+  // Logic & Transform
+  'transform': Code,
+  'condition': GitBranch,
+  'loop': Repeat,
+  'filter': Filter,
+  
+  // Special
+  'lottery-prediction': Zap,
+  'football-results': Zap,
+  'database': Database,
+};
+
+// Color mapping for categories
+const CATEGORY_COLORS: Record<string, { bg: string; icon: string; hover: string }> = {
+  'communication': { bg: 'bg-blue-100', icon: 'text-blue-600', hover: 'group-hover:bg-blue-200' },
+  'storage': { bg: 'bg-purple-100', icon: 'text-purple-600', hover: 'group-hover:bg-purple-200' },
+  'database': { bg: 'bg-green-100', icon: 'text-green-600', hover: 'group-hover:bg-green-200' },
+  'productivity': { bg: 'bg-orange-100', icon: 'text-orange-600', hover: 'group-hover:bg-orange-200' },
+  'action': { bg: 'bg-pink-100', icon: 'text-pink-600', hover: 'group-hover:bg-pink-200' },
+  'logic': { bg: 'bg-indigo-100', icon: 'text-indigo-600', hover: 'group-hover:bg-indigo-200' },
+};
 
 // Default parameters for each node type
 const DEFAULT_PARAMS: Record<string, Record<string, string>> = {
@@ -146,25 +201,30 @@ export default function NodePalette() {
               {category}
             </h3>
             <div className="space-y-1">
-              {nodeList.map((node) => (
-                <button
-                  key={node.type}
-                  onClick={() => handleAddNode(node.type)}
-                  className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-left group transition-colors"
-                >
-                  <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                    <Plus className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {node.name}
+              {nodeList.map((node) => {
+                const IconComponent = NODE_ICONS[node.type] || Plus;
+                const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS['action'];
+                
+                return (
+                  <button
+                    key={node.type}
+                    onClick={() => handleAddNode(node.type)}
+                    className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-left group transition-colors"
+                  >
+                    <div className={`w-8 h-8 rounded ${colors.bg} flex items-center justify-center ${colors.hover} transition-colors`}>
+                      <IconComponent className={`w-4 h-4 ${colors.icon}`} />
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {node.description}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {node.name}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {node.description}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}

@@ -105,28 +105,53 @@ export default function TestConfigButton({
 
     // Required parameters by node type
     const requiredParams: Record<string, string[]> = {
-      'http-request': ['url', 'method'],
-      'telegram-send': ['botToken', 'chatId', 'message'],
-      'email': ['to', 'subject', 'body'],
-      'slack': ['channel', 'text'],
-      'discord': ['content'],
-      'webhook': ['url', 'method'],
-      'sms': ['to', 'message'],
-      'google-drive': ['connection', 'operation'],
-      'dropbox': ['connection', 'operation'],
-      'aws-s3': ['connection', 'operation', 'bucket'],
+      'http-request': ['url'],
+      'telegram-send': ['message'],
+      'email': ['from', 'to', 'subject', 'body'],
+      'slack': ['text'],
+      'discord': [],
+      'webhook': ['method', 'url'],
+      'sms': ['provider', 'from', 'to', 'message'],
+      'google-drive': ['credentials', 'operation'],
+      'dropbox': ['accessToken', 'operation'],
+      'aws-s3': ['accessKeyId', 'secretAccessKey', 'region', 'operation'],
       'mysql': ['connection', 'operation'],
-      'mongodb': ['connection', 'operation', 'collection'],
-      'redis': ['connection', 'operation', 'key'],
-      'google-sheets': ['connection', 'spreadsheetId', 'operation'],
-      'notion': ['connection', 'operation'],
-      'trello': ['connection', 'operation'],
+      'mongodb': ['connection', 'operation'],
+      'redis': ['connection', 'operation'],
+      'google-sheets': ['credentials', 'spreadsheetId', 'operation'],
+      'notion': ['apiKey', 'operation'],
+      'trello': ['apiKey', 'apiToken', 'operation'],
     };
 
     const required = requiredParams[nodeType] || [];
     for (const param of required) {
       if (!params[param] || (typeof params[param] === 'string' && params[param].trim() === '')) {
         errors.push(`${param} is required`);
+      }
+    }
+
+    // Custom validation for nodes with OR conditions
+    if (nodeType === 'webhook') {
+      if (!params['url'] && !params['credentialId']) {
+        errors.push('Webhook URL or credential required');
+      }
+    }
+    
+    if (nodeType === 'slack') {
+      if (!params['webhookUrl'] && !params['credentialId']) {
+        errors.push('Slack webhook URL or credential required');
+      }
+    }
+    
+    if (nodeType === 'discord') {
+      if (!params['webhookUrl'] && !params['credentialId']) {
+        errors.push('Discord webhook URL or credential required');
+      }
+    }
+    
+    if (nodeType === 'email') {
+      if (!params['smtp'] && !params['credentialId']) {
+        errors.push('SMTP configuration or credential required');
       }
     }
 
