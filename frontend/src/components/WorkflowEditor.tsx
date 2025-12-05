@@ -1,17 +1,19 @@
-import { Save, Play } from 'lucide-react';
+import { Save, Play, Calendar } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { workflowApi } from '../services/api';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { toast } from '../utils/alerts';
 import NodePalette from './NodePalette';
 import WorkflowCanvas from './WorkflowCanvas';
 import NodeConfigPanel from './NodeConfigPanel';
+import AdvancedScheduler from './AdvancedScheduler';
 
 export default function WorkflowEditor() {
   const { id } = useParams();
   const { workflow, nodes, connections, updateMetadata, setWorkflow, clear } = useWorkflowStore();
+  const [showScheduler, setShowScheduler] = useState(false);
 
   // Load workflow if editing existing one
   const { data: existingWorkflow } = useQuery({
@@ -117,6 +119,18 @@ export default function WorkflowEditor() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Schedule Button - Only show if workflow is saved */}
+          {workflow?.id && (
+            <button
+              onClick={() => setShowScheduler(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+              title="Configure advanced scheduling"
+            >
+              <Calendar className="w-4 h-4" />
+              Schedule
+            </button>
+          )}
+          
           <button
             onClick={() => executeWorkflowMutation.mutate()}
             disabled={executeWorkflowMutation.isPending || nodes.length === 0}
@@ -145,6 +159,18 @@ export default function WorkflowEditor() {
         </div>
         <NodeConfigPanel />
       </div>
+
+      {/* Advanced Scheduler Modal */}
+      {showScheduler && workflow?.id && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-auto m-4">
+            <AdvancedScheduler 
+              workflowId={workflow.id}
+              onClose={() => setShowScheduler(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

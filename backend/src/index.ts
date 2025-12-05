@@ -30,6 +30,7 @@ import customNodesRoutes from "./routes/custom-nodes";
 import analyticsRoutes from "./routes/analytics";
 import alertsRoutes from "./routes/alerts";
 import monitoringRoutes from "./routes/monitoring";
+import schedulesRoutes from "./routes/schedules";
 import authRoutes from "./routes/auth";
 import oauthRoutes from "./routes/oauth";
 import organizationRoutes from "./routes/organizations";
@@ -74,6 +75,7 @@ app.route("/marketplace", marketplaceRoutes);
 app.route("/custom-nodes", customNodesRoutes);
 app.route("/analytics", analyticsRoutes);
 app.route("/alerts", alertsRoutes);
+app.route("/schedules", schedulesRoutes);
 app.route("/monitoring", monitoringRoutes); // Error logging endpoint - no auth required
 
 // Health check

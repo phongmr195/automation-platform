@@ -712,16 +712,49 @@ n8n có ~400+ integrations. Chúng ta cần ít nhất 50-100 nodes phổ biến
 ### **PHASE 5: ENTERPRISE FEATURES** (Priority: LOW)
 **Timeline:** 3-4 months
 
-#### 5.1 Advanced Scheduling
+#### 5.1 Advanced Scheduling ✅ **COMPLETED** (December 5, 2025)
 ```typescript
-✅ Cron scheduling         // DONE
-⬜ Calendar-based triggers
-⬜ Timezone support
-⬜ Holiday awareness
-⬜ Business hours only
-⬜ Rate limiting
-⬜ Queueing strategies
+✅ Cron scheduling         // DONE - Enhanced with advanced features
+✅ Timezone support        // DONE - Full IANA timezone support with conversion
+✅ Holiday awareness       // DONE - Custom calendars with skip/delay/execute actions
+✅ Business hours only     // DONE - Configurable per weekday with time ranges
+✅ Rate limiting           // DONE - Per hour/day limits with queue management
+✅ Queueing strategies     // DONE - FIFO/LIFO/Priority/RoundRobin
+✅ Calendar-based triggers // DONE - Via schedule exceptions and holiday calendars
+✅ Schedule exceptions     // DONE - One-time, recurring, date-range exceptions
 ```
+
+**Implementation Details:**
+- Advanced scheduling service (800+ lines)
+- 6 database models: ScheduleConfig, HolidayCalendar, Holiday, ScheduleException, ScheduleLog, + 4 enums
+- Enhanced workflow scheduler with decision logic
+- REST API (9 endpoints)
+- Frontend API client with TypeScript interfaces
+- React UI components (5 components, 800+ lines)
+- Comprehensive documentation (500+ lines)
+
+**Files Created:**
+- `backend/src/services/advancedSchedulingService.ts` - Core scheduling service
+- `backend/src/routes/schedules.ts` - REST API routes
+- `backend/src/workflow/EnhancedWorkflowScheduler.ts` - Enhanced scheduler
+- `frontend/src/services/schedulesApi.ts` - API client
+- `frontend/src/components/AdvancedScheduler.tsx` - Main scheduling UI
+- `frontend/src/components/scheduling/TimezoneSelector.tsx` - Timezone picker
+- `frontend/src/components/scheduling/BusinessHoursEditor.tsx` - Business hours config
+- `frontend/src/components/scheduling/RateLimitConfig.tsx` - Rate limit settings
+- `frontend/src/components/scheduling/ScheduleHistory.tsx` - Execution history viewer
+- `docs/ADVANCED_SCHEDULING.md` - Complete documentation
+- Database migration: `20251205074204_add_advanced_scheduling`
+
+**Key Features:**
+- Full IANA timezone support with date-fns-tz
+- Holiday calendars (public/private, recurring holidays)
+- Business hours configuration (per weekday)
+- Rate limiting (hourly/daily execution caps)
+- Queue strategies (FIFO/LIFO/Priority/RoundRobin)
+- Schedule exceptions (skip/reschedule/delay)
+- Schedule execution logging
+- Test endpoint for validation
 
 #### 5.2 Version Control
 ```typescript

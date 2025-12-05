@@ -223,7 +223,10 @@ export const workflowRoutes = (opts: {
   router.delete("/:id", async (c) => {
     const id = c.req.param("id");
 
+    // Delete related records first (in correct order to avoid FK constraints)
     await prisma.execution.deleteMany({ where: { workflowId: id } });
+    await prisma.scheduleConfig.deleteMany({ where: { workflowId: id } });
+    await prisma.workflowVersion.deleteMany({ where: { workflowId: id } });
     await prisma.workflow.delete({ where: { id } });
 
     return c.json({ success: true });

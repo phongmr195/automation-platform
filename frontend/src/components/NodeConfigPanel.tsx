@@ -271,7 +271,7 @@ export default function NodeConfigPanel() {
     const currentParams = selectedNode.data.parameters || {};
     
     // Check if we need to initialize - only do this once when node is first created
-    const shouldInitialize = Object.keys(currentParams).length === 0;
+    const shouldInitialize = Object.keys(currentParams || {}).length === 0;
     
     if (shouldInitialize) {
       const newParams = { ...currentParams };
@@ -345,7 +345,7 @@ export default function NodeConfigPanel() {
       if (footballKey) envParams.apiKey = footballKey;
     }
     
-    if (Object.keys(envParams).length > 0) {
+    if (Object.keys(envParams || {}).length > 0) {
       updateNode(selectedNode.id, {
         data: {
           ...selectedNode.data,
@@ -502,7 +502,7 @@ export default function NodeConfigPanel() {
           )}
           
           <div className="space-y-3">
-            {Object.entries(selectedNode.data.parameters).map(([key, value]) => {
+            {Object.entries(selectedNode.data.parameters || {}).map(([key, value]) => {
               const hint = PARAM_HINTS[selectedNode.data.service]?.[key];
               const isExpressionField = useExpressionEditor[key];
               const isRequired = requiredParams.includes(key);
@@ -676,7 +676,7 @@ export default function NodeConfigPanel() {
               );
             })}
             
-            {Object.keys(selectedNode.data.parameters).length === 0 && 
+            {Object.keys(selectedNode.data.parameters || {}).length === 0 && 
              !SUGGESTED_PARAMS[selectedNode.data.service] && (
               <div className="text-xs text-gray-500 text-center py-6 border-2 border-dashed border-gray-200 rounded">
                 Click "+ Add" to add parameters
@@ -686,7 +686,7 @@ export default function NodeConfigPanel() {
         </div>
 
         {/* Test Configuration */}
-        {Object.keys(selectedNode.data.parameters).length > 0 && (
+        {Object.keys(selectedNode.data.parameters || {}).length > 0 && (
           <div>
             <TestConfigButton
               nodeType={selectedNode.data.service}

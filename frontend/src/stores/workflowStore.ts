@@ -36,19 +36,56 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   connections: [],
   selectedNodeId: null,
   
-  setWorkflow: (workflow) => set({
-    workflow,
-    nodes: workflow?.nodes?.map(node => ({
-      ...node,
-      data: node.data || {
-        service: 'unknown',
-        operation: 'execute',
-        parameters: {},
+  setWorkflow: (workflow) => {
+    // Parse nodes and connections if they are JSON strings
+    let nodes: WorkflowNode[] = [];
+    let connections: NodeConnection[] = [];
+    
+    if (workflow) {
+      // Handle nodes - could be array or JSON string
+      const rawNodes = workflow.nodes;
+      if (typeof rawNodes === 'string') {
+        try {
+          nodes = JSON.parse(rawNodes);
+        } catch (e) {
+          console.error('Failed to parse nodes:', e);
+          nodes = [];
+        }
+      } else if (Array.isArray(rawNodes)) {
+        nodes = rawNodes;
       }
-    })) || [],
-    connections: workflow?.connections || [],
-    selectedNodeId: null,
-  }),
+      
+      // Handle connections - could be array or JSON string
+      const rawConnections = workflow.connections;
+      if (typeof rawConnections === 'string') {
+        try {
+          connections = JSON.parse(rawConnections);
+        } catch (e) {
+          console.error('Failed to parse connections:', e);
+          connections = [];
+        }
+      } else if (Array.isArray(rawConnections)) {
+        connections = rawConnections;
+      }
+      
+      // Ensure all nodes have proper data structure
+      nodes = nodes.map(node => ({
+        ...node,
+        data: node.data || {
+          service: 'unknown',
+          operation: 'execute',
+          parameters: {},
+        }
+      }));
+    }
+    
+    set({
+      workflow,
+      nodes,
+      connections,
+      selectedNodeId: null,
+    });
+  },
   
   setNodes: (nodes) => set({ nodes }),
   setConnections: (connections) => set({ connections }),

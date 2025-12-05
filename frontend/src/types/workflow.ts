@@ -46,10 +46,10 @@ export interface Workflow {
   id: string;
   name: string;
   description?: string;
-  nodes: WorkflowNode[];
-  connections: NodeConnection[];
-  triggers: WorkflowTrigger[];
-  settings: WorkflowSettings;
+  nodes: WorkflowNode[] | string; // Can be array or JSON string from database
+  connections: NodeConnection[] | string; // Can be array or JSON string from database
+  triggers: WorkflowTrigger[] | string; // Can be array or JSON string from database
+  settings: WorkflowSettings | string; // Can be object or JSON string from database
   active: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;

@@ -14,8 +14,8 @@ export function NodeSearchPanel({ isOpen, onClose }: NodeSearchPanelProps) {
   const { setCenter } = useReactFlow();
 
   const filteredNodes = nodes.filter((node) =>
-    node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    node.type.toLowerCase().includes(searchQuery.toLowerCase())
+    (node.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (node.type || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {

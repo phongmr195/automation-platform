@@ -63,6 +63,7 @@ model Organization {
   auditLogs   AuditLog[]
   folders     WorkflowFolder[]
   customNodeInstalls CustomNodeInstall[]
+  holidayCalendars HolidayCalendar[]
 
   @@index([slug])
 }
@@ -154,6 +155,7 @@ model Workflow {
 
   executions Execution[]
   metrics    WorkflowMetrics?
+  scheduleConfig ScheduleConfig?
 
   @@index([organizationId])
   @@index([ownerId])
@@ -221,6 +223,7 @@ model Execution {
   updatedAt DateTime @updatedAt
 
   logs NodeLog[]
+  scheduleLogs ScheduleLog[]
 }
 
 // -------------------------------------------------------
@@ -1158,4 +1161,187 @@ enum TraceStatus {
   ERROR
   TIMEOUT
   CANCELLED
+}
+
+// -------------------------------------------------------
+// ADVANCED SCHEDULING (Phase 5.1)
+// -------------------------------------------------------
+
+model ScheduleConfig {
+  id             String   @id @default(cuid())
+  workflowId     String   @unique
+  workflow       Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  // Basic schedule
+  cronExpression String   // Standard cron
+  enabled        Boolean  @default(true)
+  
+  // Timezone support
+  timezone       String   @default("UTC") // IANA timezone (e.g., "America/New_York")
+  
+  // Holiday awareness
+  skipHolidays   Boolean  @default(false)
+  holidayAction  HolidayAction @default(SKIP)
+  holidayCalendarId String? // Reference to HolidayCalendar
+  holidayCalendar HolidayCalendar? @relation(fields: [holidayCalendarId], references: [id])
+  
+  // Business hours
+  businessHoursOnly Boolean @default(false)
+  businessHoursConfig Json? // { monday: { start: "09:00", end: "17:00" }, ... }
+  
+  // Rate limiting
+  maxExecutionsPerHour Int? // null = unlimited
+  maxExecutionsPerDay  Int? // null = unlimited
+  
+  // Queueing strategy
+  queueStrategy  QueueStrategy @default(FIFO)
+  maxQueueSize   Int?   // null = unlimited
+  priority       Int    @default(0) // Higher = more important
+  
+  // Concurrency
+  maxConcurrent  Int    @default(1) // Max parallel executions
+  
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  exceptions     ScheduleException[]
+  logs           ScheduleLog[]
+  
+  @@index([workflowId])
+  @@index([enabled])
+}
+
+model HolidayCalendar {
+  id             String   @id @default(cuid())
+  name           String   // e.g., "US Federal Holidays", "Company Holidays"
+  description    String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Timezone for the calendar
+  timezone       String   @default("UTC")
+  
+  // Public or private
+  isPublic       Boolean  @default(false)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  holidays       Holiday[]
+  scheduleConfigs ScheduleConfig[]
+  
+  @@index([organizationId])
+  @@index([isPublic])
+}
+
+model Holiday {
+  id         String   @id @default(cuid())
+  calendarId String
+  calendar   HolidayCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  
+  name       String   // e.g., "New Year's Day", "Christmas"
+  date       DateTime // Actual date
+  isRecurring Boolean @default(false) // Recurs yearly?
+  
+  // For recurring holidays (e.g., "First Monday of September")
+  recurrenceRule Json? // { type: "monthly", dayOfWeek: 1, weekOfMonth: 1 }
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([calendarId])
+  @@index([date])
+}
+
+model ScheduleException {
+  id         String   @id @default(cuid())
+  scheduleId String
+  schedule   ScheduleConfig @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  // Exception type
+  type       ExceptionType
+  
+  // Date/time range
+  startDate  DateTime
+  endDate    DateTime?
+  
+  // Action
+  action     ExceptionAction @default(SKIP)
+  
+  // Alternative cron (if action = RESCHEDULE)
+  alternativeCron String?
+  
+  // Reason/description
+  reason     String?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([scheduleId])
+  @@index([startDate])
+}
+
+model ScheduleLog {
+  id             String   @id @default(cuid())
+  scheduleId     String
+  schedule       ScheduleConfig @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  // Execution details
+  scheduledTime  DateTime // When it was supposed to run
+  actualTime     DateTime? // When it actually ran
+  status         ScheduleStatus
+  
+  // Skipped/delayed reasons
+  skippedReason  String?  // e.g., "Holiday", "Outside business hours", "Rate limit"
+  delayedBy      Int?     // milliseconds
+  
+  // Execution reference
+  executionId    String?
+  execution      Execution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  
+  // Queue info
+  queuePosition  Int?
+  queueWaitTime  Int?     // milliseconds
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([scheduleId])
+  @@index([scheduledTime])
+  @@index([status])
+  @@index([executionId])
+}
+
+enum HolidayAction {
+  SKIP          // Don't execute on holidays
+  DELAY_TO_NEXT // Execute on next business day
+  EXECUTE       // Execute anyway
+}
+
+enum QueueStrategy {
+  FIFO          // First in, first out
+  LIFO          // Last in, first out
+  PRIORITY      // Based on priority field
+  ROUND_ROBIN   // Distribute evenly
+}
+
+enum ExceptionType {
+  ONE_TIME      // Specific date
+  RECURRING     // Repeating pattern
+  DATE_RANGE    // Range of dates
+}
+
+enum ExceptionAction {
+  SKIP          // Don't execute
+  RESCHEDULE    // Use alternative cron
+  DELAY         // Delay by X hours
+}
+
+enum ScheduleStatus {
+  SCHEDULED     // Waiting to execute
+  EXECUTED      // Successfully executed
+  SKIPPED       // Skipped due to holiday/business hours
+  DELAYED       // Delayed due to rate limit/queue
+  FAILED        // Failed to execute
+  CANCELLED     // Manually cancelled
 }
