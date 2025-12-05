@@ -826,3 +826,336 @@ enum AlertSeverity {
   ERROR
   CRITICAL
 }
+
+// -------------------------------------------------------
+// MONITORING & HEALTH CHECKS
+// -------------------------------------------------------
+
+model SystemHealth {
+  id             String   @id @default(cuid())
+  
+  // Component status
+  component      String   // database, redis, worker, api, storage
+  status         HealthStatus
+  
+  // Health metrics
+  responseTime   Float?   // milliseconds
+  uptime         Float?   // percentage
+  lastCheck      DateTime @default(now())
+  
+  // Error information
+  errorMessage   String?
+  errorCount     Int      @default(0)
+  
+  // Additional metadata
+  metadata       Json?    // Component-specific health data
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([component])
+  @@index([status])
+  @@index([lastCheck])
+  @@index([component, lastCheck])
+}
+
+enum HealthStatus {
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  UNKNOWN
+}
+
+model UptimeMonitor {
+  id             String   @id @default(cuid())
+  
+  // Service information
+  serviceName    String
+  serviceUrl     String?
+  serviceType    String   // api, database, worker, external
+  
+  // Monitoring configuration
+  checkInterval  Int      @default(60) // seconds
+  timeout        Int      @default(30) // seconds
+  enabled        Boolean  @default(true)
+  
+  // Status
+  currentStatus  HealthStatus @default(UNKNOWN)
+  lastStatusChange DateTime?
+  
+  // Uptime statistics
+  totalChecks    Int      @default(0)
+  successfulChecks Int    @default(0)
+  failedChecks   Int      @default(0)
+  uptimePercentage Float  @default(100)
+  
+  // Performance
+  avgResponseTime Float   @default(0) // milliseconds
+  lastResponseTime Float? // milliseconds
+  
+  // Timestamps
+  lastCheckAt    DateTime?
+  lastSuccessAt  DateTime?
+  lastFailureAt  DateTime?
+  
+  // Organization scope (optional)
+  organizationId String?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  incidents      UptimeIncident[]
+  checks         UptimeCheck[]
+  
+  @@unique([serviceName, organizationId])
+  @@index([serviceName])
+  @@index([serviceType])
+  @@index([currentStatus])
+  @@index([organizationId])
+}
+
+model UptimeCheck {
+  id             String   @id @default(cuid())
+  
+  monitorId      String
+  monitor        UptimeMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  
+  // Check result
+  status         HealthStatus
+  responseTime   Float?   // milliseconds
+  statusCode     Int?     // HTTP status code
+  
+  // Error information
+  errorMessage   String?
+  errorType      String?
+  
+  // Check metadata
+  metadata       Json?
+  
+  checkedAt      DateTime @default(now())
+  
+  @@index([monitorId])
+  @@index([status])
+  @@index([checkedAt])
+}
+
+model UptimeIncident {
+  id             String   @id @default(cuid())
+  
+  monitorId      String
+  monitor        UptimeMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  
+  // Incident information
+  severity       AlertSeverity
+  title          String
+  description    String?
+  
+  // Status
+  status         IncidentStatus @default(OPEN)
+  
+  // Timeline
+  startedAt      DateTime @default(now())
+  detectedAt     DateTime @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  
+  // Duration
+  duration       Int?     // seconds (calculated when resolved)
+  
+  // Impact
+  affectedChecks Int      @default(0)
+  downtime       Float    @default(0) // percentage during incident
+  
+  // Resolution
+  resolvedBy     String?  // userId
+  resolution     String?  // Resolution notes
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([monitorId])
+  @@index([status])
+  @@index([severity])
+  @@index([startedAt])
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+model PerformanceMetric {
+  id             String   @id @default(cuid())
+  
+  // Metric identification
+  metricName     String   // api_response_time, db_query_time, node_execution_time, etc.
+  metricType     MetricType
+  
+  // Scope
+  organizationId String?
+  workflowId     String?
+  executionId    String?
+  nodeId         String?
+  endpoint       String?  // API endpoint
+  
+  // Metric values
+  value          Float
+  unit           String   // ms, s, bytes, count, percentage
+  
+  // Statistical aggregation
+  min            Float?
+  max            Float?
+  avg            Float?
+  p50            Float?
+  p95            Float?
+  p99            Float?
+  count          Int?
+  
+  // Time window
+  timestamp      DateTime @default(now())
+  windowStart    DateTime?
+  windowEnd      DateTime?
+  
+  // Metadata
+  tags           Json?    // { "method": "GET", "status": "200", ... }
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([metricName])
+  @@index([metricType])
+  @@index([organizationId])
+  @@index([workflowId])
+  @@index([executionId])
+  @@index([timestamp])
+}
+
+enum MetricType {
+  GAUGE        // Current value (e.g., memory usage)
+  COUNTER      // Incrementing counter (e.g., request count)
+  HISTOGRAM    // Distribution (e.g., response times)
+  SUMMARY      // Statistical summary
+}
+
+model ErrorLog {
+  id             String   @id @default(cuid())
+  
+  // Error classification
+  errorType      String   // TypeError, ValidationError, NetworkError, etc.
+  errorCode      String?  // Application-specific error code
+  severity       AlertSeverity
+  
+  // Error details
+  message        String
+  stack          String?  @db.Text
+  
+  // Context
+  organizationId String?
+  workflowId     String?
+  executionId    String?
+  nodeId         String?
+  userId         String?
+  
+  // Request context
+  endpoint       String?
+  method         String?
+  statusCode     Int?
+  
+  // Environment
+  environment    String?  // production, staging, development
+  version        String?  // Application version
+  
+  // User agent & IP
+  userAgent      String?
+  ipAddress      String?
+  
+  // Grouping (for deduplication)
+  fingerprint    String?  // Hash of error for grouping similar errors
+  occurrences    Int      @default(1)
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+  
+  // Resolution
+  resolved       Boolean  @default(false)
+  resolvedAt     DateTime?
+  resolvedBy     String?  // userId
+  
+  // Metadata
+  metadata       Json?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([errorType])
+  @@index([severity])
+  @@index([organizationId])
+  @@index([workflowId])
+  @@index([executionId])
+  @@index([fingerprint])
+  @@index([resolved])
+  @@index([createdAt])
+}
+
+model APMTrace {
+  id             String   @id @default(cuid())
+  
+  // Trace identification
+  traceId        String   // Distributed trace ID
+  spanId         String   // Span ID
+  parentSpanId   String?  // Parent span for nested operations
+  
+  // Operation details
+  operationName  String   // e.g., "workflow.execute", "http.request", "db.query"
+  operationType  String   // workflow, http, database, cache, etc.
+  
+  // Scope
+  organizationId String?
+  workflowId     String?
+  executionId    String?
+  nodeId         String?
+  
+  // Timing
+  startTime      DateTime
+  endTime        DateTime?
+  duration       Float?   // milliseconds
+  
+  // Status
+  status         TraceStatus
+  statusCode     Int?
+  
+  // Error information
+  error          Boolean  @default(false)
+  errorMessage   String?
+  errorType      String?
+  
+  // Tags and metadata
+  tags           Json?    // { "http.method": "GET", "db.statement": "SELECT ...", ... }
+  logs           Json?    // Span logs
+  
+  // Resource information
+  serviceName    String?
+  serviceVersion String?
+  
+  createdAt      DateTime @default(now())
+  
+  @@unique([traceId, spanId])
+  @@index([traceId])
+  @@index([spanId])
+  @@index([parentSpanId])
+  @@index([operationName])
+  @@index([organizationId])
+  @@index([workflowId])
+  @@index([executionId])
+  @@index([startTime])
+  @@index([status])
+}
+
+enum TraceStatus {
+  OK
+  ERROR
+  TIMEOUT
+  CANCELLED
+}

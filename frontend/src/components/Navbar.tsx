@@ -88,6 +88,14 @@ export default function Navbar() {
                   Alerts
                 </Link>
 
+                {/* Monitoring Link */}
+                <Link
+                  to="/monitoring"
+                  className={getLinkClass('/monitoring')}
+                >
+                  Monitoring
+                </Link>
+
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}

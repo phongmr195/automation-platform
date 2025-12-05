@@ -2,6 +2,10 @@ import dotenv from "dotenv";
 // Load .env first (main config)
 dotenv.config();
 
+// Initialize Sentry (must be before other imports)
+import { initSentry, captureException } from "./lib/sentry";
+initSentry();
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
@@ -25,6 +29,7 @@ import marketplaceRoutes from "./routes/marketplace";
 import customNodesRoutes from "./routes/custom-nodes";
 import analyticsRoutes from "./routes/analytics";
 import alertsRoutes from "./routes/alerts";
+import monitoringRoutes from "./routes/monitoring";
 import authRoutes from "./routes/auth";
 import oauthRoutes from "./routes/oauth";
 import organizationRoutes from "./routes/organizations";
@@ -32,6 +37,9 @@ import { ExecutionWebSocketServer } from "./websocket";
 
 // Import workflow engine to auto-register nodes
 import "./workflow/index";
+
+// Import health check scheduler
+import HealthCheckScheduler from "./services/healthCheckScheduler";
 
 const app = new Hono();
 
@@ -66,9 +74,31 @@ app.route("/marketplace", marketplaceRoutes);
 app.route("/custom-nodes", customNodesRoutes);
 app.route("/analytics", analyticsRoutes);
 app.route("/alerts", alertsRoutes);
+app.route("/monitoring", monitoringRoutes);
 
 // Health check
 app.get("/", (c) => c.text("Automation Platform API"));
+
+// Global error handler
+app.onError((err, c) => {
+  console.error('Unhandled error:', err);
+  
+  // Capture exception in Sentry
+  captureException(err, {
+    tags: {
+      path: c.req.path,
+      method: c.req.method,
+    },
+    extra: {
+      headers: Object.fromEntries(c.req.raw.headers.entries()),
+    },
+  });
+
+  return c.json({
+    success: false,
+    error: err.message || 'Internal server error',
+  }, 500);
+});
 
 // WebSocket stats endpoint
 app.get("/ws/stats", (c) => {
@@ -86,6 +116,10 @@ const server = serve({
 // Initialize WebSocket server (cast to HTTP Server type)
 const wsServer = new ExecutionWebSocketServer(server as any);
 
+// Start health check scheduler
+HealthCheckScheduler.start();
+HealthCheckScheduler.scheduleCleanup();
+
 console.log("Backend running on port", process.env.PORT || 3000);
 console.log(
   "WebSocket server running on ws://localhost:" +
@@ -96,12 +130,18 @@ console.log(
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("SIGTERM signal received: closing HTTP and WebSocket servers");
+  HealthCheckScheduler.stop();
   await wsServer.close();
+  const { flush } = await import("./lib/sentry");
+  await flush();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   console.log("SIGINT signal received: closing HTTP and WebSocket servers");
+  HealthCheckScheduler.stop();
   await wsServer.close();
+  const { flush } = await import("./lib/sentry");
+  await flush();
   process.exit(0);
 });
