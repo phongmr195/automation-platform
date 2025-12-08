@@ -15,7 +15,7 @@ export default function Notifications() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
-    queryFn: collaborationApi.getNotifications,
+    queryFn: async () => collaborationApi.getNotifications(),
     refetchInterval: 30000, // Refetch every 30s
   });
 
@@ -30,7 +30,7 @@ export default function Notifications() {
   });
 
   const markAllAsReadMutation = useMutation({
-    mutationFn: collaborationApi.markAllNotificationsAsRead,
+    mutationFn: collaborationApi.markAllAsRead,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast.success('All notifications marked as read');

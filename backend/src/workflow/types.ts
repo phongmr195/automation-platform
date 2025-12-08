@@ -52,6 +52,7 @@ export interface Workflow {
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
+  folderId?: string;
 }
 
 export interface ExecutionContext {

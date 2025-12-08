@@ -84,7 +84,7 @@ export default function WorkflowEditor() {
           nodes,
           edges: connections, // Convert connections to edges
         },
-        folderId: selectedFolderId || null, // Always include folderId for both create and update
+        folderId: selectedFolderId || undefined, // Always include folderId for both create and update
       };
 
       if (workflow?.id) {
@@ -215,7 +215,7 @@ export default function WorkflowEditor() {
               currentNodes={nodes}
               currentConnections={connections}
               currentSettings={workflow?.settings}
-              currentTriggers={workflow?.triggers || []}
+              currentTriggers={Array.isArray(workflow?.triggers) ? workflow.triggers : []}
             />
           )}
           

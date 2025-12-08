@@ -7,7 +7,7 @@ import { useOrganization } from '../contexts/OrganizationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { TemplateReviews } from './TemplateReviews';
-import { TemplateComments } from './TemplateComments';
+import TemplateComments from './TemplateComments';
 import type { WorkflowTemplate } from '../types/workflow';
 
 interface TemplatePreviewProps {

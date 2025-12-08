@@ -52,6 +52,7 @@ export interface Workflow {
   triggers?: WorkflowTrigger[] | string;
   settings?: WorkflowSettings | string;
   active?: boolean;
+  folderId?: string;
   // New version-based fields
   versions?: Array<{
     id: string;

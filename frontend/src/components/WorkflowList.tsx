@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { workflowApi } from "../services/api";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -464,11 +464,11 @@ export default function WorkflowList() {
         {selectedIds.size > 0 && (
           <BulkActions
             selectedCount={selectedIds.size}
-            onClear={handleClearSelection}
             onExecute={handleBulkExecute}
             onDuplicate={handleBulkDuplicate}
             onExport={handleBulkExport}
             onDelete={handleBulkDelete}
+            onClearSelection={handleClearSelection}
           />
         )}
       </div>
