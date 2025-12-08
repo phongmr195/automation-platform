@@ -348,7 +348,7 @@ export default function WorkflowList() {
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-5 h-5" />
-                  New Workflow
+                  Create Workflow
                   {selectedFolder && (
                     <span className="text-xs bg-blue-700 px-2 py-0.5 rounded">
                       in folder

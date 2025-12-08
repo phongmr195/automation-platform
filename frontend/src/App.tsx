@@ -130,7 +130,9 @@ export default function App() {
                     path="/editor"
                     element={
                       <ProtectedRoute>
-                        <WorkflowEditor />
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                          <WorkflowEditor />
+                        </div>
                       </ProtectedRoute>
                     }
                   />
@@ -138,7 +140,9 @@ export default function App() {
                     path="/editor/:id"
                     element={
                       <ProtectedRoute>
-                        <WorkflowEditor />
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                          <WorkflowEditor />
+                        </div>
                       </ProtectedRoute>
                     }
                   />

@@ -1,4 +1,4 @@
-import { Save, Play, Calendar, Folder } from 'lucide-react';
+import { Save, Play, Calendar, Folder, MessageSquare, Activity } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -10,19 +10,34 @@ import WorkflowCanvas from './WorkflowCanvas';
 import NodeConfigPanel from './NodeConfigPanel';
 import AdvancedScheduler from './AdvancedScheduler';
 import { VersionControlToolbar } from './version-control';
+import { ActiveCollaborators, CommentsPanel, ActivityFeed, NotificationCenter, CursorOverlay } from './collaboration';
+import { useCollaboration } from '../hooks/collaboration';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 export default function WorkflowEditor() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const initialFolderId = searchParams.get('folderId');
+  const commentId = searchParams.get('commentId'); // Get commentId from URL
   const { workflow, nodes, connections, updateMetadata, setWorkflow, clear } = useWorkflowStore();
   const [showScheduler, setShowScheduler] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(initialFolderId);
+  const [showComments, setShowComments] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const currentUser = useCurrentUser();
 
   // Fetch folders
   const { data: folders = [] } = useQuery({
     queryKey: ['folders'],
     queryFn: () => workflowApi.getFolders(),
+  });
+
+  // Collaboration hook - only enable for saved workflows
+  const { cursors } = useCollaboration({
+    workflowId: workflow?.id || '',
+    userId: currentUser?.id || '',
+    userName: currentUser?.name || currentUser?.email || 'Anonymous',
+    enabled: !!workflow?.id && !!currentUser,
   });
 
   // Load workflow if editing existing one
@@ -41,6 +56,26 @@ export default function WorkflowEditor() {
     }
   }, [existingWorkflow, id, setWorkflow, clear]);
 
+  // Auto-open comments panel if commentId is in URL
+  useEffect(() => {
+    if (commentId && workflow?.id) {
+      setShowComments(true);
+      
+      // Scroll to comment after a short delay to ensure panel is rendered
+      setTimeout(() => {
+        const commentElement = document.getElementById(`comment-${commentId}`);
+        if (commentElement) {
+          commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Highlight the comment briefly
+          commentElement.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+          setTimeout(() => {
+            commentElement.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [commentId, workflow?.id]);
+
   const saveWorkflowMutation = useMutation({
     mutationFn: async () => {
       const workflowData = {
@@ -49,7 +84,7 @@ export default function WorkflowEditor() {
           nodes,
           edges: connections, // Convert connections to edges
         },
-        ...(selectedFolderId && !workflow?.id && { folderId: selectedFolderId }) // Add folderId only when creating new workflow
+        folderId: selectedFolderId || null, // Always include folderId for both create and update
       };
 
       if (workflow?.id) {
@@ -108,7 +143,7 @@ export default function WorkflowEditor() {
             />
             
             {/* Folder Selector */}
-            {!workflow?.id && folders.length > 0 && (
+            {folders.length > 0 && (
               <div className="flex items-center gap-2">
                 <Folder className="w-4 h-4 text-gray-400" />
                 <select
@@ -125,14 +160,6 @@ export default function WorkflowEditor() {
                 </select>
               </div>
             )}
-            
-            {/* Show current folder for existing workflows */}
-            {workflow?.id && selectedFolderId && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded text-sm text-gray-700">
-                <Folder className="w-4 h-4" />
-                <span>{folders.find((f: any) => f.id === selectedFolderId)?.name || 'Unknown folder'}</span>
-              </div>
-            )}
           </div>
           
           <input
@@ -145,6 +172,42 @@ export default function WorkflowEditor() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Notification Center */}
+          <NotificationCenter />
+          
+          {/* Active Collaborators - Only show for saved workflows */}
+          {workflow?.id && <ActiveCollaborators workflowId={workflow.id} />}
+          
+          {/* Comments Toggle */}
+          {workflow?.id && (
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                showComments 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title="Comments"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+          )}
+          
+          {/* Activity Toggle */}
+          {workflow?.id && (
+            <button
+              onClick={() => setShowActivity(!showActivity)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                showActivity 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title="Activity"
+            >
+              <Activity className="w-4 h-4" />
+            </button>
+          )}
+          
           {/* Version Control Toolbar - Only show if workflow is saved */}
           {workflow?.id && (
             <VersionControlToolbar 
@@ -191,9 +254,41 @@ export default function WorkflowEditor() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         <NodePalette />
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <WorkflowCanvas />
+          {/* Cursor Overlay for real-time collaboration */}
+          {workflow?.id && cursors.length > 0 && (
+            <CursorOverlay cursors={cursors} />
+          )}
         </div>
+        
+        {/* Comments Panel */}
+        {showComments && workflow?.id && currentUser && (
+          <div className="w-96 flex flex-col border-l border-gray-200">
+            <CommentsPanel 
+              workflowId={workflow.id}
+              currentUserId={currentUser.id}
+              onClose={() => setShowComments(false)}
+            />
+          </div>
+        )}
+        
+        {/* Activity Panel */}
+        {showActivity && workflow?.id && (
+          <div className="w-96 border-l border-gray-200 bg-white overflow-y-auto p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Activity</h3>
+              <button
+                onClick={() => setShowActivity(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <ActivityFeed workflowId={workflow.id} />
+          </div>
+        )}
+        
         <NodeConfigPanel />
       </div>
 

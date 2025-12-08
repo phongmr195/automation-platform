@@ -5,6 +5,8 @@ import IORedis from "ioredis";
 interface Client {
   ws: WebSocket;
   executionIds: Set<string>;
+  workflowIds: Set<string>; // For collaboration features
+  userId?: string; // User ID for collaboration
 }
 
 /**
@@ -40,11 +42,11 @@ export class ExecutionWebSocketServer {
    * Setup Redis subscription to listen for execution events
    */
   private setupRedisSubscription() {
-    this.redis.subscribe("execution:events", (err) => {
+    this.redis.subscribe("execution:events", "collaboration:events", (err) => {
       if (err) {
         console.error("[WebSocket] Failed to subscribe to Redis:", err);
       } else {
-        console.log("[WebSocket] Subscribed to execution:events channel");
+        console.log("[WebSocket] Subscribed to execution:events and collaboration:events channels");
       }
     });
 
@@ -55,6 +57,13 @@ export class ExecutionWebSocketServer {
           this.broadcastEvent(event, data);
         } catch (err) {
           console.error("[WebSocket] Failed to parse event:", err);
+        }
+      } else if (channel === "collaboration:events") {
+        try {
+          const eventData = JSON.parse(message);
+          this.broadcastCollaborationEvent(eventData);
+        } catch (err) {
+          console.error("[WebSocket] Failed to parse collaboration event:", err);
         }
       }
     });
@@ -73,6 +82,8 @@ export class ExecutionWebSocketServer {
       const client: Client = {
         ws,
         executionIds: new Set(),
+        workflowIds: new Set(),
+        userId: undefined,
       };
       this.clients.set(clientId, client);
 
@@ -174,6 +185,41 @@ export class ExecutionWebSocketServer {
         }
         break;
 
+      case "join_workflow":
+        // Join workflow collaboration room
+        if (message.workflowId && message.userId) {
+          client.workflowIds.add(message.workflowId);
+          client.userId = message.userId;
+          console.log(
+            `[WebSocket] Client ${clientId} (user: ${message.userId}) joined workflow ${message.workflowId}`
+          );
+          client.ws.send(
+            JSON.stringify({
+              type: "joined_workflow",
+              workflowId: message.workflowId,
+              timestamp: new Date().toISOString(),
+            })
+          );
+        }
+        break;
+
+      case "leave_workflow":
+        // Leave workflow collaboration room
+        if (message.workflowId) {
+          client.workflowIds.delete(message.workflowId);
+          console.log(
+            `[WebSocket] Client ${clientId} left workflow ${message.workflowId}`
+          );
+          client.ws.send(
+            JSON.stringify({
+              type: "left_workflow",
+              workflowId: message.workflowId,
+              timestamp: new Date().toISOString(),
+            })
+          );
+        }
+        break;
+
       case "ping":
         // Respond to ping
         client.ws.send(
@@ -219,6 +265,51 @@ export class ExecutionWebSocketServer {
 
     if (sentCount > 0) {
       console.log(`[WebSocket] Broadcast ${event} to ${sentCount} client(s)`);
+    }
+  }
+
+  /**
+   * Broadcast collaboration event to workflow subscribers
+   */
+  private broadcastCollaborationEvent(eventData: any) {
+    const { type, workflowId, userId, data } = eventData;
+    if (!workflowId) return;
+
+    let sentCount = 0;
+
+    for (const client of this.clients.values()) {
+      // Send to clients in the same workflow, but skip sender if userId matches
+      if (client.workflowIds.has(workflowId)) {
+        // For notifications, only send to the specific user
+        if (type === 'notification.created') {
+          if (client.userId === userId && client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(
+              JSON.stringify({
+                type,
+                data,
+                timestamp: new Date().toISOString(),
+              })
+            );
+            sentCount++;
+          }
+        } else {
+          // For other events, send to all except sender
+          if (client.userId !== userId && client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(
+              JSON.stringify({
+                type,
+                data,
+                timestamp: new Date().toISOString(),
+              })
+            );
+            sentCount++;
+          }
+        }
+      }
+    }
+
+    if (sentCount > 0) {
+      console.log(`[WebSocket] Broadcast collaboration event ${type} to ${sentCount} client(s)`);
     }
   }
 

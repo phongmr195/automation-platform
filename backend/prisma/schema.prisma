@@ -33,6 +33,12 @@ model User {
   templates   WorkflowTemplate[]
   templateReviews TemplateReview[]
   templateComments TemplateComment[]
+  
+  // Collaboration
+  workflowCollaborations WorkflowCollaborator[]
+  workflowComments       WorkflowComment[]
+  workflowActivities     WorkflowActivity[]
+  workflowNotifications  WorkflowNotification[]
 }
 
 model Session {
@@ -163,6 +169,12 @@ model Workflow {
   diffs         WorkflowDiff[]
   snapshots     WorkflowSnapshot[]
   mergeRequests WorkflowMergeRequest[]
+  
+  // Collaboration
+  collaborators WorkflowCollaborator[]
+  comments      WorkflowComment[]
+  activities    WorkflowActivity[]
+  notifications WorkflowNotification[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -1502,4 +1514,208 @@ enum MergeStatus {
   MERGED
   CLOSED
   CONFLICTED
+}
+
+// -------------------------------------------------------
+// COLLABORATION FEATURES
+// -------------------------------------------------------
+
+// Workflow collaborators (users with access to edit/view workflows)
+model WorkflowCollaborator {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  permission CollaboratorPermission @default(VIEW)
+  
+  // Presence tracking
+  lastSeenAt DateTime?
+  cursorPosition Json?  // {x: number, y: number, nodeId?: string}
+  isActive   Boolean  @default(false)
+  
+  invitedBy  String?  // User ID who invited
+  invitedAt  DateTime @default(now())
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([workflowId, userId])
+  @@index([workflowId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+enum CollaboratorPermission {
+  VIEW      // Can only view
+  COMMENT   // Can view and comment
+  EDIT      // Can edit workflow
+}
+
+// Comments on workflows (thread-based)
+model WorkflowComment {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  content    String   @db.Text
+  
+  // Position in canvas (for node-specific comments)
+  nodeId     String?  // If comment is on a specific node
+  position   Json?    // {x: number, y: number} for canvas position
+  
+  // Threading
+  parentId   String?
+  parent     WorkflowComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    WorkflowComment[] @relation("CommentReplies")
+  
+  // Mentions
+  mentions   Json?    // Array of user IDs mentioned in comment
+  
+  // Status
+  resolved   Boolean  @default(false)
+  resolvedBy String?  // User ID
+  resolvedAt DateTime?
+  
+  // Engagement
+  reactions  Json?    // {emoji: string, userIds: string[]}[]
+  
+  edited     Boolean  @default(false)
+  editedAt   DateTime?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  notifications WorkflowNotification[]
+  
+  @@index([workflowId])
+  @@index([userId])
+  @@index([nodeId])
+  @@index([parentId])
+  @@index([resolved])
+  @@index([createdAt])
+}
+
+// Activity feed for workflow changes
+model WorkflowActivity {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  type       ActivityType
+  action     String   // e.g., "workflow.created", "node.added", "comment.created"
+  
+  // Activity details
+  targetType String?  // e.g., "node", "comment", "connection"
+  targetId   String?  // ID of the target (nodeId, commentId, etc.)
+  
+  metadata   Json?    // Additional context about the change
+  changes    Json?    // Before/after values for edits
+  
+  // For grouping similar activities
+  batchId    String?  // Group related activities together
+  
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  notifications WorkflowNotification[]
+  
+  @@index([workflowId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([batchId])
+}
+
+enum ActivityType {
+  WORKFLOW_CREATED
+  WORKFLOW_UPDATED
+  WORKFLOW_DELETED
+  WORKFLOW_PUBLISHED
+  WORKFLOW_ACTIVATED
+  WORKFLOW_DEACTIVATED
+  
+  NODE_ADDED
+  NODE_UPDATED
+  NODE_DELETED
+  NODE_MOVED
+  
+  CONNECTION_ADDED
+  CONNECTION_DELETED
+  
+  COMMENT_ADDED
+  COMMENT_UPDATED
+  COMMENT_DELETED
+  COMMENT_RESOLVED
+  
+  COLLABORATOR_ADDED
+  COLLABORATOR_REMOVED
+  
+  EXECUTION_STARTED
+  EXECUTION_COMPLETED
+  EXECUTION_FAILED
+}
+
+// Notifications for @mentions and workflow changes
+model WorkflowNotification {
+  id         String   @id @default(cuid())
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  type       NotificationType
+  title      String
+  message    String   @db.Text
+  
+  // Source of notification
+  activityId String?
+  activity   WorkflowActivity? @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  
+  commentId  String?
+  comment    WorkflowComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  // Notification metadata
+  actionUrl  String?  // Deep link to the relevant part of workflow
+  metadata   Json?
+  
+  // Status
+  read       Boolean  @default(false)
+  readAt     DateTime?
+  
+  dismissed  Boolean  @default(false)
+  dismissedAt DateTime?
+  
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
+  @@index([workflowId])
+  @@index([type])
+  @@index([read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  MENTION           // @mentioned in comment
+  COMMENT_REPLY     // Reply to your comment
+  COMMENT_RESOLVED  // Your comment was resolved
+  
+  WORKFLOW_SHARED   // Workflow shared with you
+  WORKFLOW_UPDATED  // Workflow you're watching was updated
+  
+  EXECUTION_FAILED  // Workflow execution failed
+  EXECUTION_SUCCESS // Workflow execution succeeded (if watching)
+  
+  COLLABORATOR_JOINED  // New collaborator joined
 }
