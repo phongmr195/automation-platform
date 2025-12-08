@@ -19,6 +19,7 @@ import { Analytics } from './pages/Analytics';
 import { Alerts } from './pages/Alerts';
 import Monitoring from './pages/Monitoring';
 import { VersionControl } from './pages/VersionControl';
+import Notifications from './pages/Notifications';
 
 // Create QueryClient OUTSIDE component to prevent re-creation on every render
 const queryClient = new QueryClient({
@@ -102,6 +103,16 @@ export default function App() {
                       <ProtectedRoute>
                         <div className="flex-1 overflow-auto">
                           <Monitoring />
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/notifications"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-auto">
+                          <Notifications />
                         </div>
                       </ProtectedRoute>
                     }

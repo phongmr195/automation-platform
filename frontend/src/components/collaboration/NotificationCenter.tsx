@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, X, MessageSquare, Share2, UserPlus, CheckCircle2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../hooks/collaboration/useNotifications';
 import type { WorkflowNotification } from '../../services/collaborationApi';
 
@@ -29,6 +30,7 @@ const NOTIFICATION_COLORS: Record<string, string> = {
 export const NotificationCenter = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   const {
     notifications,
@@ -180,7 +182,7 @@ export const NotificationCenter = () => {
             <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={() => {
-                  // Could navigate to a full notifications page
+                  navigate('/notifications');
                   setIsOpen(false);
                 }}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium"

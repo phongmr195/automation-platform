@@ -11,7 +11,7 @@ export const useNotifications = () => {
   });
 
   const notifications = data?.notifications || [];
-  const unreadCount = notifications.filter(n => !n.isRead && !n.read).length;
+  const unreadCount = data?.unreadCount || notifications.filter(n => !n.read).length;
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) =>
