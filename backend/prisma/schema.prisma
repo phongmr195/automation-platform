@@ -156,6 +156,13 @@ model Workflow {
   executions Execution[]
   metrics    WorkflowMetrics?
   scheduleConfig ScheduleConfig?
+  
+  // Version control
+  commits       WorkflowCommit[]
+  branches      WorkflowBranch[]
+  diffs         WorkflowDiff[]
+  snapshots     WorkflowSnapshot[]
+  mergeRequests WorkflowMergeRequest[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -197,6 +204,7 @@ model WorkflowVersion {
   publishedInWorkflow Workflow? @relation("PublishedVersionRelation")
 
   executions Execution[]
+  commits    WorkflowCommit[]
 }
 
 // -------------------------------------------------------
@@ -1344,4 +1352,154 @@ enum ScheduleStatus {
   DELAYED       // Delayed due to rate limit/queue
   FAILED        // Failed to execute
   CANCELLED     // Manually cancelled
+}
+
+// -------------------------------------------------------
+// VERSION CONTROL (Git-like)
+// -------------------------------------------------------
+
+model WorkflowCommit {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  branchId    String?
+  branch      WorkflowBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  
+  versionId   String
+  version     WorkflowVersion @relation(fields: [versionId], references: [id])
+  
+  sha         String   @unique // Git-like commit hash
+  message     String   // Commit message
+  author      String   // User who made the commit
+  authorId    String?  // Link to User
+  
+  parentSha   String?  // Previous commit SHA
+  parent      WorkflowCommit? @relation("CommitHistory", fields: [parentSha], references: [sha], onDelete: SetNull)
+  children    WorkflowCommit[] @relation("CommitHistory")
+  
+  branchHead  WorkflowBranch? @relation("BranchHead")
+  
+  changes     Json?    // Detailed change diff
+  tags        String[] // Tags for this commit (e.g., "v1.0", "stable")
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([workflowId])
+  @@index([branchId])
+  @@index([versionId])
+  @@index([sha])
+  @@index([parentSha])
+  @@index([authorId])
+}
+
+model WorkflowBranch {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  name        String   // Branch name (e.g., "main", "dev", "feature/new-nodes")
+  description String?
+  
+  headSha     String?  @unique // Current commit SHA
+  headCommit  WorkflowCommit? @relation("BranchHead", fields: [headSha], references: [sha], onDelete: SetNull)
+  
+  isDefault   Boolean  @default(false)
+  isProtected Boolean  @default(false)
+  
+  createdBy   String?  // User ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  commits     WorkflowCommit[]
+  
+  @@unique([workflowId, name])
+  @@index([workflowId])
+  @@index([headSha])
+}
+
+model WorkflowDiff {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  fromSha     String   // Source commit
+  toSha       String   // Target commit
+  
+  diffType    DiffType
+  diffData    Json     // Detailed diff information
+  
+  // Statistics
+  nodesAdded     Int @default(0)
+  nodesRemoved   Int @default(0)
+  nodesModified  Int @default(0)
+  connectionsAdded   Int @default(0)
+  connectionsRemoved Int @default(0)
+  settingsChanged    Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([workflowId, fromSha, toSha])
+  @@index([workflowId])
+}
+
+model WorkflowSnapshot {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  name        String   // Snapshot name
+  description String?
+  
+  commitSha   String   // Associated commit
+  definition  Json     // Full workflow definition
+  
+  createdBy   String?  // User ID
+  createdAt   DateTime @default(now())
+  
+  @@index([workflowId])
+  @@index([commitSha])
+}
+
+model WorkflowMergeRequest {
+  id            String   @id @default(cuid())
+  workflowId    String
+  workflow      Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?
+  
+  sourceBranch  String   // Branch to merge from
+  targetBranch  String   // Branch to merge into
+  
+  status        MergeStatus @default(OPEN)
+  
+  createdBy     String?  // User ID
+  assignedTo    String?  // User ID
+  
+  mergedAt      DateTime?
+  mergedBy      String?  // User ID
+  
+  conflicts     Json?    // Merge conflicts if any
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([workflowId])
+  @@index([status])
+}
+
+enum DiffType {
+  NODES_CHANGED
+  CONNECTIONS_CHANGED
+  SETTINGS_CHANGED
+  COMPLETE_REWRITE
+  MINOR_CHANGE
+}
+
+enum MergeStatus {
+  OPEN
+  MERGED
+  CLOSED
+  CONFLICTED
 }

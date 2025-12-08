@@ -9,6 +9,7 @@ import NodePalette from './NodePalette';
 import WorkflowCanvas from './WorkflowCanvas';
 import NodeConfigPanel from './NodeConfigPanel';
 import AdvancedScheduler from './AdvancedScheduler';
+import { VersionControlToolbar } from './version-control';
 
 export default function WorkflowEditor() {
   const { id } = useParams();
@@ -34,18 +35,10 @@ export default function WorkflowEditor() {
     mutationFn: async () => {
       const workflowData = {
         name: workflow?.name || 'New Workflow',
-        description: workflow?.description || '',
-        nodes,
-        connections,
-        triggers: workflow?.triggers || [],
-        settings: workflow?.settings || {
-          timezone: 'Asia/Ho_Chi_Minh',
-          timeout: 300000,
-          retryOnError: true,
-          maxRetries: 3,
-          retryDelay: 5000,
-        },
-        active: workflow?.active || false,
+        definition: {
+          nodes,
+          edges: connections, // Convert connections to edges
+        }
       };
 
       if (workflow?.id) {
@@ -70,18 +63,10 @@ export default function WorkflowEditor() {
       if (!workflowId) {
         const workflowData = {
           name: workflow?.name || 'New Workflow',
-          description: workflow?.description || '',
-          nodes,
-          connections,
-          triggers: [],
-          settings: {
-            timezone: 'Asia/Ho_Chi_Minh',
-            timeout: 300000,
-            retryOnError: true,
-            maxRetries: 3,
-            retryDelay: 5000,
-          },
-          active: false,
+          definition: {
+            nodes,
+            edges: connections,
+          }
         };
         
         const result = await workflowApi.createWorkflow(workflowData);
@@ -119,6 +104,17 @@ export default function WorkflowEditor() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Version Control Toolbar - Only show if workflow is saved */}
+          {workflow?.id && (
+            <VersionControlToolbar 
+              workflowId={workflow.id}
+              currentNodes={nodes}
+              currentConnections={connections}
+              currentSettings={workflow?.settings}
+              currentTriggers={workflow?.triggers || []}
+            />
+          )}
+          
           {/* Schedule Button - Only show if workflow is saved */}
           {workflow?.id && (
             <button

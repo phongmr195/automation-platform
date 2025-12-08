@@ -172,7 +172,17 @@ export const workflowRoutes = (opts: {
   router.get("/:id", async (c) => {
     const id = c.req.param("id");
 
-    const wf = await prisma.workflow.findUnique({ where: { id } });
+    const wf = await prisma.workflow.findUnique({ 
+      where: { id },
+      include: {
+        versions: {
+          orderBy: {
+            versionNumber: 'asc'
+          }
+        },
+        publishedVersion: true
+      }
+    });
     if (!wf) return c.json({ error: "Workflow not found" }, 404);
 
     return c.json(wf);
@@ -224,9 +234,21 @@ export const workflowRoutes = (opts: {
     const id = c.req.param("id");
 
     // Delete related records first (in correct order to avoid FK constraints)
+    // 1. Delete version control records (they reference WorkflowVersion)
+    await prisma.workflowMergeRequest.deleteMany({ where: { workflowId: id } });
+    await prisma.workflowSnapshot.deleteMany({ where: { workflowId: id } });
+    await prisma.workflowDiff.deleteMany({ where: { workflowId: id } });
+    await prisma.workflowCommit.deleteMany({ where: { workflowId: id } });
+    await prisma.workflowBranch.deleteMany({ where: { workflowId: id } });
+    
+    // 2. Delete workflow execution and schedule records
     await prisma.execution.deleteMany({ where: { workflowId: id } });
     await prisma.scheduleConfig.deleteMany({ where: { workflowId: id } });
+    
+    // 3. Delete workflow versions (no longer referenced by commits)
     await prisma.workflowVersion.deleteMany({ where: { workflowId: id } });
+    
+    // 4. Finally delete the workflow itself
     await prisma.workflow.delete({ where: { id } });
 
     return c.json({ success: true });

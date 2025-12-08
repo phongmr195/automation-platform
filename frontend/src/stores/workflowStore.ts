@@ -37,35 +37,80 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   selectedNodeId: null,
   
   setWorkflow: (workflow) => {
-    // Parse nodes and connections if they are JSON strings
     let nodes: WorkflowNode[] = [];
     let connections: NodeConnection[] = [];
     
     if (workflow) {
-      // Handle nodes - could be array or JSON string
-      const rawNodes = workflow.nodes;
-      if (typeof rawNodes === 'string') {
-        try {
-          nodes = JSON.parse(rawNodes);
-        } catch (e) {
-          console.error('Failed to parse nodes:', e);
-          nodes = [];
-        }
-      } else if (Array.isArray(rawNodes)) {
-        nodes = rawNodes;
+      console.log('🔍 Loading workflow:', workflow.id, workflow.name);
+      console.log('📦 Workflow data:', {
+        hasPublishedVersion: !!workflow.publishedVersion,
+        versionsCount: workflow.versions?.length || 0,
+        hasOldNodes: !!workflow.nodes,
+        hasOldConnections: !!workflow.connections
+      });
+      
+      // New workflow structure uses versions array
+      let definition: any = null;
+      
+      // Try to get definition from publishedVersion or latest version
+      if (workflow.publishedVersion?.definition) {
+        definition = workflow.publishedVersion.definition;
+        console.log('✅ Using publishedVersion definition');
+      } else if (workflow.versions && workflow.versions.length > 0) {
+        // Get latest version
+        const latestVersion = workflow.versions[workflow.versions.length - 1];
+        definition = latestVersion.definition;
+        console.log('✅ Using latest version definition:', latestVersion.versionNumber);
       }
       
-      // Handle connections - could be array or JSON string
-      const rawConnections = workflow.connections;
-      if (typeof rawConnections === 'string') {
-        try {
-          connections = JSON.parse(rawConnections);
-        } catch (e) {
-          console.error('Failed to parse connections:', e);
-          connections = [];
+      if (definition) {
+        console.log('📋 Definition found:', {
+          hasNodes: !!definition.nodes,
+          hasEdges: !!definition.edges,
+          nodesType: typeof definition.nodes,
+          edgesType: typeof definition.edges,
+          fullDefinition: definition
+        });
+        
+        // New format: definition.nodes and definition.edges
+        if (definition.nodes) {
+          nodes = Array.isArray(definition.nodes) ? definition.nodes : 
+                  (typeof definition.nodes === 'string' ? JSON.parse(definition.nodes) : []);
+          console.log('✅ Loaded nodes:', nodes.length, nodes);
         }
-      } else if (Array.isArray(rawConnections)) {
-        connections = rawConnections;
+        
+        // Convert edges to connections
+        if (definition.edges) {
+          connections = Array.isArray(definition.edges) ? definition.edges :
+                       (typeof definition.edges === 'string' ? JSON.parse(definition.edges) : []);
+          console.log('✅ Loaded connections:', connections.length);
+        }
+      } else {
+        console.log('⚠️ No definition found, trying old format...');
+        // Fallback to old format for backwards compatibility
+        const rawNodes = workflow.nodes;
+        if (typeof rawNodes === 'string') {
+          try {
+            nodes = JSON.parse(rawNodes);
+          } catch (e) {
+            console.error('Failed to parse nodes:', e);
+            nodes = [];
+          }
+        } else if (Array.isArray(rawNodes)) {
+          nodes = rawNodes;
+        }
+        
+        const rawConnections = workflow.connections;
+        if (typeof rawConnections === 'string') {
+          try {
+            connections = JSON.parse(rawConnections);
+          } catch (e) {
+            console.error('Failed to parse connections:', e);
+            connections = [];
+          }
+        } else if (Array.isArray(rawConnections)) {
+          connections = rawConnections;
+        }
       }
       
       // Ensure all nodes have proper data structure

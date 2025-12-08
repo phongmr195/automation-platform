@@ -18,6 +18,7 @@ import { TemplateGallery } from './pages/TemplateGallery';
 import { Analytics } from './pages/Analytics';
 import { Alerts } from './pages/Alerts';
 import Monitoring from './pages/Monitoring';
+import { VersionControl } from './pages/VersionControl';
 
 // Create QueryClient OUTSIDE component to prevent re-creation on every render
 const queryClient = new QueryClient({
@@ -138,6 +139,14 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <WorkflowEditor />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/workflows/:workflowId/version-control"
+                    element={
+                      <ProtectedRoute>
+                        <VersionControl />
                       </ProtectedRoute>
                     }
                   />

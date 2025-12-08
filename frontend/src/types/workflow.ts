@@ -46,11 +46,32 @@ export interface Workflow {
   id: string;
   name: string;
   description?: string;
-  nodes: WorkflowNode[] | string; // Can be array or JSON string from database
-  connections: NodeConnection[] | string; // Can be array or JSON string from database
-  triggers: WorkflowTrigger[] | string; // Can be array or JSON string from database
-  settings: WorkflowSettings | string; // Can be object or JSON string from database
-  active: boolean;
+  // Legacy fields (deprecated but kept for backwards compatibility)
+  nodes?: WorkflowNode[] | string;
+  connections?: NodeConnection[] | string;
+  triggers?: WorkflowTrigger[] | string;
+  settings?: WorkflowSettings | string;
+  active?: boolean;
+  // New version-based fields
+  versions?: Array<{
+    id: string;
+    versionNumber: number;
+    definition: {
+      nodes: WorkflowNode[];
+      edges: NodeConnection[];
+    };
+    isDraft: boolean;
+    createdAt: Date | string;
+  }>;
+  publishedVersion?: {
+    id: string;
+    versionNumber: number;
+    definition: {
+      nodes: WorkflowNode[];
+      edges: NodeConnection[];
+    };
+  };
+  publishedVersionId?: string;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

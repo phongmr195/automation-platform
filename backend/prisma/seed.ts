@@ -99,25 +99,62 @@ async function main() {
 
   console.log('✅ Audit log created');
 
-  // Create sample workflow (optional)
+  // Create sample workflow with initial version
   const sampleWorkflow = await prisma.workflow.create({
     data: {
       name: 'Sample Admin Workflow',
-      description: 'A sample workflow for testing',
       organizationId: adminOrg.id,
       ownerId: adminUser.id,
-      active: false,
-      nodes: JSON.stringify([
-        {
-          id: '1',
-          type: 'trigger',
-          position: { x: 100, y: 100 },
-          data: { label: 'Start' },
-        },
-      ]),
-      connections: JSON.stringify([]),
-      triggers: JSON.stringify([]),
+      versions: {
+        create: {
+          versionNumber: 1,
+          definition: {
+            nodes: [
+              {
+                id: 'node-1',
+                type: 'http-request',
+                position: { x: 100, y: 100 },
+                data: {
+                  service: 'http',
+                  operation: 'request',
+                  parameters: {
+                    url: 'https://api.example.com/data',
+                    method: 'GET'
+                  }
+                }
+              },
+              {
+                id: 'node-2',
+                type: 'transform',
+                position: { x: 400, y: 100 },
+                data: {
+                  service: 'transform',
+                  operation: 'map',
+                  parameters: {
+                    mapping: {
+                      result: '{{ data }}'
+                    }
+                  }
+                }
+              }
+            ],
+            edges: [
+              {
+                id: 'edge-1',
+                source: 'node-1',
+                target: 'node-2',
+                sourceHandle: 'output',
+                targetHandle: 'input'
+              }
+            ]
+          },
+          isDraft: true
+        }
+      }
     },
+    include: {
+      versions: true
+    }
   });
 
   console.log('✅ Sample workflow created:');

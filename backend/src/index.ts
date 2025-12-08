@@ -34,6 +34,7 @@ import schedulesRoutes from "./routes/schedules";
 import authRoutes from "./routes/auth";
 import oauthRoutes from "./routes/oauth";
 import organizationRoutes from "./routes/organizations";
+import versionControlRoutes from "./routes/versionControl";
 import { ExecutionWebSocketServer } from "./websocket";
 
 // Import workflow engine to auto-register nodes
@@ -76,6 +77,7 @@ app.route("/custom-nodes", customNodesRoutes);
 app.route("/analytics", analyticsRoutes);
 app.route("/alerts", alertsRoutes);
 app.route("/schedules", schedulesRoutes);
+app.route("/version-control", versionControlRoutes);
 app.route("/monitoring", monitoringRoutes); // Error logging endpoint - no auth required
 
 // Health check
