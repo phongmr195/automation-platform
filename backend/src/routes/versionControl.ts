@@ -551,8 +551,8 @@ app.post('/merge-requests', async (c) => {
     const mergeRequest = await prisma.workflowMergeRequest.create({
       data: {
         workflowId: data.workflowId,
-        sourceBranchId: data.sourceBranchId,
-        targetBranchId: data.targetBranchId,
+        sourceBranch: data.sourceBranchId,
+        targetBranch: data.targetBranchId,
         title: data.title,
         description: data.description,
         createdBy: userId,

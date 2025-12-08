@@ -41,8 +41,8 @@ const dateRangeSchema = z.object({
  */
 analytics.get('/dashboard', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const { startDate, endDate } = dateRangeSchema.parse(c.req.query());
 
     const stats = await analyticsService.getDashboardStats(
@@ -64,8 +64,8 @@ analytics.get('/dashboard', async (c) => {
  */
 analytics.get('/execution-trends', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const query = c.req.query();
     const { startDate, endDate } = dateRangeSchema.parse(query);
     const granularity = query.granularity === 'hour' ? 'hour' : 'day';
@@ -90,8 +90,8 @@ analytics.get('/execution-trends', async (c) => {
  */
 analytics.get('/workflow-performance', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const limit = parseInt(c.req.query('limit') || '10');
 
     const workflows = await analyticsService.getWorkflowPerformance(
@@ -112,8 +112,8 @@ analytics.get('/workflow-performance', async (c) => {
  */
 analytics.get('/slowest-workflows', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const limit = parseInt(c.req.query('limit') || '10');
 
     const workflows = await analyticsService.getSlowestWorkflows(
@@ -134,8 +134,8 @@ analytics.get('/slowest-workflows', async (c) => {
  */
 analytics.get('/failed-workflows', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const limit = parseInt(c.req.query('limit') || '10');
 
     const workflows = await analyticsService.getFailedWorkflows(
@@ -156,8 +156,8 @@ analytics.get('/failed-workflows', async (c) => {
  */
 analytics.get('/resource-metrics', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const { startDate, endDate } = dateRangeSchema.parse(c.req.query());
 
     const metrics = await analyticsService.getResourceMetrics(
@@ -179,8 +179,8 @@ analytics.get('/resource-metrics', async (c) => {
  */
 analytics.get('/cost-breakdown', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const { startDate, endDate } = dateRangeSchema.parse(c.req.query());
 
     const costs = await analyticsService.getCostBreakdown(
@@ -202,13 +202,12 @@ analytics.get('/cost-breakdown', async (c) => {
  */
 analytics.post('/budget', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const body = await c.req.json();
+    const organizationId = body.organizationId || c.req.query('organizationId') || undefined;
     if (!organizationId) {
       return c.json({ error: 'Organization ID required' }, 400);
     }
-
-    const body = await c.req.json();
     const budgetLimit = parseFloat(body.budgetLimit);
 
     if (isNaN(budgetLimit) || budgetLimit < 0) {
@@ -231,8 +230,8 @@ analytics.post('/budget', async (c) => {
 analytics.get('/workflow/:workflowId/metrics', async (c) => {
   try {
     const workflowId = c.req.param('workflowId');
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const { startDate, endDate } = dateRangeSchema.parse(c.req.query());
 
     // Get workflow-specific trends
@@ -271,8 +270,8 @@ analytics.get('/workflow/:workflowId/metrics', async (c) => {
  */
 analytics.get('/export', async (c) => {
   try {
-    const user = c.get('user') as any;
-    const organizationId = user?.organizationId;
+    const userId = (c as any).get('userId') as string;
+    const organizationId = c.req.query('organizationId') || undefined;
     const { startDate, endDate } = dateRangeSchema.parse(c.req.query());
     const type = c.req.query('type') || 'executions';
 

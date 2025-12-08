@@ -24,7 +24,7 @@ const app = new Hono();
 app.get('/health', async (c) => {
   try {
     const health = await HealthCheckService.getSystemHealth();
-    
+
     return c.json({
       success: true,
       data: health,
@@ -89,8 +89,7 @@ app.get('/health/:component', authMiddleware, async (c) => {
 app.post('/monitors', authMiddleware, async (c) => {
   try {
     const body = await c.req.json();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const monitor = await UptimeMonitoringService.createMonitor({
       serviceName: body.serviceName,
@@ -122,8 +121,7 @@ app.post('/monitors', authMiddleware, async (c) => {
  */
 app.get('/monitors', authMiddleware, async (c) => {
   try {
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const monitors = await UptimeMonitoringService.getAllMonitors(organizationId);
 
@@ -203,7 +201,7 @@ app.post('/monitors/:id/check', authMiddleware, async (c) => {
 app.post('/monitors/:id/incidents/:incidentId/acknowledge', authMiddleware, async (c) => {
   try {
     const incidentId = c.req.param('incidentId');
-    const { userId } = c.get('user');
+    const userId = (c as any).get('userId') as string;
 
     const incident = await db.uptimeIncident.update({
       where: { id: incidentId },
@@ -235,7 +233,7 @@ app.post('/monitors/:id/incidents/:incidentId/acknowledge', authMiddleware, asyn
 app.post('/monitors/:id/incidents/:incidentId/resolve', authMiddleware, async (c) => {
   try {
     const incidentId = c.req.param('incidentId');
-    const { userId } = c.get('user');
+    const userId = (c as any).get('userId') as string;
     const body = await c.req.json();
 
     const incident = await db.uptimeIncident.findUnique({
@@ -285,8 +283,7 @@ app.post('/monitors/:id/incidents/:incidentId/resolve', authMiddleware, async (c
 app.post('/metrics', authMiddleware, async (c) => {
   try {
     const body = await c.req.json();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const metric = await PerformanceMetricsService.recordMetric({
       metricName: body.metricName,
@@ -324,8 +321,7 @@ app.get('/metrics/:metricName', authMiddleware, async (c) => {
   try {
     const metricName = c.req.param('metricName');
     const { startDate, endDate, workflowId, executionId, nodeId, endpoint } = c.req.query();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
@@ -366,8 +362,7 @@ app.get('/metrics/:metricName/aggregated', authMiddleware, async (c) => {
   try {
     const metricName = c.req.param('metricName');
     const { startDate, endDate, groupBy = 'hour', workflowId } = c.req.query();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
@@ -409,16 +404,14 @@ app.get('/metrics/:metricName/aggregated', authMiddleware, async (c) => {
 app.post('/errors', async (c) => {
   try {
     const body = await c.req.json();
-    
+
     // Try to get user/org from auth if available, but don't require it
     let userId: string | undefined;
     let organizationId: string | undefined;
-    
+
     try {
-      const user = c.get('user') as any;
-      const organization = c.get('organization') as any;
-      userId = user?.userId;
-      organizationId = organization?.organizationId;
+      userId = (c as any).get('userId') as string | undefined;
+      organizationId = (c as any).get('organizationId') as string | undefined;
     } catch (e) {
       // No auth - that's ok for error logging
       console.log('Error logging without authentication');
@@ -478,8 +471,7 @@ app.get('/errors', authMiddleware, async (c) => {
       workflowId,
       executionId,
     } = c.req.query();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const result = await ErrorTrackingService.getErrors({
       organizationId,
@@ -521,8 +513,7 @@ app.get('/errors', authMiddleware, async (c) => {
 app.get('/errors/stats', authMiddleware, async (c) => {
   try {
     const { days = '7' } = c.req.query();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const stats = await ErrorTrackingService.getErrorStats(
       organizationId,
@@ -551,7 +542,7 @@ app.get('/errors/stats', authMiddleware, async (c) => {
 app.post('/errors/:id/resolve', authMiddleware, async (c) => {
   try {
     const errorId = c.req.param('id');
-    const { userId } = c.get('user');
+    const userId = (c as any).get('userId') as string;
 
     const error = await ErrorTrackingService.resolveError(errorId, userId);
 
@@ -581,8 +572,7 @@ app.post('/errors/:id/resolve', authMiddleware, async (c) => {
 app.post('/traces', authMiddleware, async (c) => {
   try {
     const body = await c.req.json();
-    const organization = c.get('organization');
-    const organizationId = organization?.organizationId;
+    const organizationId = (c as any).get('organizationId') as string | undefined;
 
     const trace = await APMService.startTrace({
       traceId: body.traceId,
@@ -725,7 +715,7 @@ app.get('/telegram/test', authMiddleware, async (c) => {
 
     return c.json({
       success: sent,
-      message: sent 
+      message: sent
         ? 'Test notification sent to Telegram successfully!'
         : 'Failed to send test notification',
     });
@@ -747,7 +737,7 @@ app.get('/telegram/test', authMiddleware, async (c) => {
 app.get('/telegram/status', authMiddleware, async (c) => {
   const enabled = sentryTelegramService.isEnabled();
   const rateLimitStatus = sentryTelegramService.getRateLimitStatus();
-  
+
   return c.json({
     success: true,
     data: {

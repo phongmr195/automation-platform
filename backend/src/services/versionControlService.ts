@@ -405,10 +405,10 @@ export class VersionControlService {
     await prisma.workflow.update({
       where: { id: workflowId },
       data: {
-        nodes: commit.version.definition.nodes,
-        connections: commit.version.definition.connections,
-        triggers: commit.version.definition.triggers || [],
-        settings: commit.version.definition.settings || {},
+        nodes: (commit.version.definition as any).nodes,
+        connections: (commit.version.definition as any).connections,
+        triggers: (commit.version.definition as any).triggers || [],
+        settings: (commit.version.definition as any).settings || {},
         publishedVersionId: newVersion.id
       }
     });

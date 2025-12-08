@@ -2,8 +2,93 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth';
 import { AdvancedSchedulingService } from '../services/advancedSchedulingService';
 import { HolidayAction, QueueStrategy, ExceptionType, ExceptionAction, ScheduleStatus } from '@prisma/client';
+import { logger } from '../lib/logger';
 
 const app = new Hono();
+
+// -------------------------------------------------------
+// UTILITY ENDPOINTS (Must be defined BEFORE /:workflowId)
+// -------------------------------------------------------
+
+/**
+ * GET /schedules/timezones
+ * Get list of valid timezones
+ */
+app.get('/timezones', authMiddleware, async (c) => {
+  try {
+    // Return common IANA timezones
+    const timezones = [
+      { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+      { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+      { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
+      { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+      { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+      { value: 'Europe/London', label: 'London' },
+      { value: 'Europe/Paris', label: 'Paris, Berlin, Madrid' },
+      { value: 'Asia/Tokyo', label: 'Tokyo, Osaka' },
+      { value: 'Asia/Shanghai', label: 'Beijing, Shanghai' },
+      { value: 'Asia/Hong_Kong', label: 'Hong Kong' },
+      { value: 'Asia/Singapore', label: 'Singapore' },
+      { value: 'Asia/Dubai', label: 'Dubai' },
+      { value: 'Australia/Sydney', label: 'Sydney, Melbourne' },
+      { value: 'Pacific/Auckland', label: 'Auckland' },
+    ];
+
+    return c.json({ success: true, data: timezones });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// -------------------------------------------------------
+// HOLIDAY CALENDAR ENDPOINTS (Must be before /:workflowId)
+// -------------------------------------------------------
+
+/**
+ * POST /schedules/calendars
+ * Create holiday calendar
+ */
+app.post('/calendars', authMiddleware, async (c) => {
+  try {
+    const body = await c.req.json();
+    const organizationId = (c as any).get('organizationId') as string | undefined;
+
+    const calendar = await AdvancedSchedulingService.createHolidayCalendar({
+      name: body.name,
+      description: body.description,
+      organizationId: organizationId,
+      timezone: body.timezone,
+      isPublic: body.isPublic,
+    });
+
+    return c.json({ success: true, data: calendar }, 201);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * POST /schedules/calendars/:calendarId/holidays
+ * Add holiday to calendar
+ */
+app.post('/calendars/:calendarId/holidays', authMiddleware, async (c) => {
+  try {
+    const calendarId = c.req.param('calendarId');
+    const body = await c.req.json();
+
+    const holiday = await AdvancedSchedulingService.addHoliday({
+      calendarId,
+      name: body.name,
+      date: new Date(body.date),
+      isRecurring: body.isRecurring,
+      recurrenceRule: body.recurrenceRule,
+    });
+
+    return c.json({ success: true, data: holiday }, 201);
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 
 // -------------------------------------------------------
 // SCHEDULE CONFIG ENDPOINTS
@@ -38,7 +123,7 @@ app.post('/:workflowId', authMiddleware, async (c) => {
 
     return c.json({ success: true, data: config }, 201);
   } catch (error: any) {
-    console.error('Error creating schedule config:', error);
+    logger.error('Error creating schedule config:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -72,56 +157,6 @@ app.delete('/:workflowId', authMiddleware, async (c) => {
     await AdvancedSchedulingService.deleteScheduleConfig(workflowId);
 
     return c.json({ success: true });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// -------------------------------------------------------
-// HOLIDAY CALENDAR ENDPOINTS
-// -------------------------------------------------------
-
-/**
- * POST /schedules/calendars
- * Create holiday calendar
- */
-app.post('/calendars', authMiddleware, async (c) => {
-  try {
-    const body = await c.req.json();
-    const organization = c.get('organization');
-
-    const calendar = await AdvancedSchedulingService.createHolidayCalendar({
-      name: body.name,
-      description: body.description,
-      organizationId: organization?.organizationId,
-      timezone: body.timezone,
-      isPublic: body.isPublic,
-    });
-
-    return c.json({ success: true, data: calendar }, 201);
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-/**
- * POST /schedules/calendars/:calendarId/holidays
- * Add holiday to calendar
- */
-app.post('/calendars/:calendarId/holidays', authMiddleware, async (c) => {
-  try {
-    const calendarId = c.req.param('calendarId');
-    const body = await c.req.json();
-
-    const holiday = await AdvancedSchedulingService.addHoliday({
-      calendarId,
-      name: body.name,
-      date: new Date(body.date),
-      isRecurring: body.isRecurring,
-      recurrenceRule: body.recurrenceRule,
-    });
-
-    return c.json({ success: true, data: holiday }, 201);
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }
@@ -196,40 +231,6 @@ app.get('/:workflowId/history', authMiddleware, async (c) => {
     });
 
     return c.json({ success: true, data: history });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// -------------------------------------------------------
-// UTILITY ENDPOINTS
-// -------------------------------------------------------
-
-/**
- * GET /schedules/timezones
- * Get list of valid timezones
- */
-app.get('/timezones', authMiddleware, async (c) => {
-  try {
-    // Return common IANA timezones
-    const timezones = [
-      { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
-      { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
-      { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
-      { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
-      { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
-      { value: 'Europe/London', label: 'London' },
-      { value: 'Europe/Paris', label: 'Paris, Berlin, Madrid' },
-      { value: 'Asia/Tokyo', label: 'Tokyo, Osaka' },
-      { value: 'Asia/Shanghai', label: 'Beijing, Shanghai' },
-      { value: 'Asia/Hong_Kong', label: 'Hong Kong' },
-      { value: 'Asia/Singapore', label: 'Singapore' },
-      { value: 'Asia/Dubai', label: 'Dubai' },
-      { value: 'Australia/Sydney', label: 'Sydney, Melbourne' },
-      { value: 'Pacific/Auckland', label: 'Auckland' },
-    ];
-
-    return c.json({ success: true, data: timezones });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);
   }

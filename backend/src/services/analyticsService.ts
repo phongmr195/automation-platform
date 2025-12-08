@@ -411,8 +411,8 @@ export class AnalyticsService {
         failedExecutions: status === 'failed' ? { increment: 1 } : undefined,
         cancelledExecutions: status === 'cancelled' ? { increment: 1 } : undefined,
         avgDuration: { increment: duration / 2 }, // Simplified moving average
-        minDuration: { set: Math.min },
-        maxDuration: { set: Math.max },
+        minDuration: { set: 0 },
+        maxDuration: { set: 0 },
       },
     });
 

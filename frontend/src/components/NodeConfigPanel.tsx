@@ -1,7 +1,7 @@
 import { X, Sparkles } from 'lucide-react';
 import { useWorkflowStore } from '../stores/workflowStore';
 import { useConfirmDialog } from './ui/ConfirmDialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import ExpressionEditor from './ExpressionEditor';
 import AutoCompleteInput from './AutoCompleteInput';
 import { FieldValidation, FieldValidator } from './FieldValidation';
@@ -227,7 +227,7 @@ const OPERATION_OPTIONS: Record<string, string[]> = {
   'http-request': ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 };
 
-export default function NodeConfigPanel() {
+function NodeConfigPanel() {
   const { nodes, selectedNodeId, setSelectedNodeId, updateNode } = useWorkflowStore();
   const { confirm } = useConfirmDialog();
   const [useExpressionEditor, setUseExpressionEditor] = useState<Record<string, boolean>>({});
@@ -727,3 +727,5 @@ export default function NodeConfigPanel() {
     </div>
   );
 }
+
+export default memo(NodeConfigPanel);

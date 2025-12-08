@@ -14,6 +14,7 @@ import type {
   AlertChannelType,
   AlertSeverity 
 } from '@prisma/client';
+import { logger } from '../lib/logger';
 
 // Types
 export interface AlertRuleInput {
@@ -328,7 +329,7 @@ export class AlertService {
 
       return true;
     } catch (error) {
-      console.error('Channel test failed:', error);
+      logger.error('Channel test failed:', error);
       return false;
     }
   }
@@ -357,7 +358,7 @@ export class AlertService {
     if (rule.lastTriggeredAt) {
       const cooldownEnd = new Date(rule.lastTriggeredAt.getTime() + rule.cooldownPeriod * 1000);
       if (new Date() < cooldownEnd) {
-        console.log(`Alert rule ${rule.id} is in cooldown period`);
+        logger.info(`Alert rule ${rule.id} is in cooldown period`);
         throw new Error('Alert rule is in cooldown period');
       }
     }
@@ -393,7 +394,7 @@ export class AlertService {
           },
         });
       } catch (error) {
-        console.error(`Failed to send alert to channel ${ruleChannel.channelId}:`, error);
+        logger.error(`Failed to send alert to channel ${ruleChannel.channelId}:`, error);
         channelResults[ruleChannel.channelId] = {
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -487,7 +488,7 @@ export class AlertService {
           });
         }
       } catch (error) {
-        console.error(`Error evaluating rule ${rule.id}:`, error);
+        logger.error(`Error evaluating rule ${rule.id}:`, error);
       }
     }
   }

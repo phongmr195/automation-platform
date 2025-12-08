@@ -36,7 +36,7 @@ app.use('*', authMiddleware);
  * Get all organizations for current user
  */
 app.get('/', async (c) => {
-  const userId = c.get('userId') as string;
+  const userId = (c as any).get('userId') as string;
 
   const organizations = await organizationService.getUserOrganizations(userId);
 
@@ -51,14 +51,14 @@ app.get('/', async (c) => {
  * Create a new organization
  */
 app.post('/', async (c) => {
-  const userId = c.get('userId') as string;
+  const userId = (c as any).get('userId') as string;
   const body = await c.req.json();
 
   // Validate input
   const validation = createOrganizationSchema.safeParse(body);
   if (!validation.success) {
     return c.json(
-      { error: 'Validation failed', details: validation.error.errors },
+      { error: 'Validation failed', details: validation.error.issues },
       400
     );
   }
@@ -84,7 +84,7 @@ app.post('/', async (c) => {
  * Get organization details
  */
 app.get('/:organizationId', requireOrganization, async (c) => {
-  const organizationId = c.get('organizationId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
 
   const organization = await organizationService.getOrganization(organizationId);
 
@@ -100,15 +100,15 @@ app.get('/:organizationId', requireOrganization, async (c) => {
  * Update organization details (requires ADMIN role)
  */
 app.put('/:organizationId', requireOrganization, requireRole('ADMIN'), async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
   const body = await c.req.json();
 
   // Validate input
   const validation = updateOrganizationSchema.safeParse(body);
   if (!validation.success) {
     return c.json(
-      { error: 'Validation failed', details: validation.error.errors },
+      { error: 'Validation failed', details: validation.error.issues },
       400
     );
   }
@@ -131,8 +131,8 @@ app.put('/:organizationId', requireOrganization, requireRole('ADMIN'), async (c)
  * Delete organization (requires OWNER role)
  */
 app.delete('/:organizationId', requireOrganization, requireRole('OWNER'), async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
 
   try {
     await organizationService.deleteOrganization(organizationId, userId);
@@ -147,7 +147,7 @@ app.delete('/:organizationId', requireOrganization, requireRole('OWNER'), async 
  * Get organization members
  */
 app.get('/:organizationId/members', requireOrganization, async (c) => {
-  const organizationId = c.get('organizationId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
 
   const organization = await organizationService.getOrganization(organizationId);
 
@@ -166,15 +166,15 @@ app.get('/:organizationId/members', requireOrganization, async (c) => {
  * Invite member to organization (requires ADMIN role)
  */
 app.post('/:organizationId/members', requireOrganization, requireRole('ADMIN'), async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
   const body = await c.req.json();
 
   // Validate input
   const validation = inviteMemberSchema.safeParse(body);
   if (!validation.success) {
     return c.json(
-      { error: 'Validation failed', details: validation.error.errors },
+      { error: 'Validation failed', details: validation.error.issues },
       400
     );
   }
@@ -198,8 +198,8 @@ app.post('/:organizationId/members', requireOrganization, requireRole('ADMIN'), 
  * Update member role (requires OWNER role)
  */
 app.put('/:organizationId/members/:memberId/role', requireOrganization, requireRole('OWNER'), async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
   const memberId = c.req.param('memberId');
   const body = await c.req.json();
 
@@ -207,7 +207,7 @@ app.put('/:organizationId/members/:memberId/role', requireOrganization, requireR
   const validation = updateMemberRoleSchema.safeParse(body);
   if (!validation.success) {
     return c.json(
-      { error: 'Validation failed', details: validation.error.errors },
+      { error: 'Validation failed', details: validation.error.issues },
       400
     );
   }
@@ -231,8 +231,8 @@ app.put('/:organizationId/members/:memberId/role', requireOrganization, requireR
  * Remove member from organization (requires ADMIN role)
  */
 app.delete('/:organizationId/members/:memberId', requireOrganization, requireRole('ADMIN'), async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
   const memberId = c.req.param('memberId');
 
   try {
@@ -248,8 +248,8 @@ app.delete('/:organizationId/members/:memberId', requireOrganization, requireRol
  * Leave organization
  */
 app.post('/:organizationId/leave', requireOrganization, async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
 
   try {
     await organizationService.leaveOrganization(organizationId, userId);
@@ -264,8 +264,8 @@ app.post('/:organizationId/leave', requireOrganization, async (c) => {
  * Get audit logs (requires MEMBER role)
  */
 app.get('/:organizationId/audit-logs', requireOrganization, async (c) => {
-  const organizationId = c.get('organizationId') as string;
-  const userId = c.get('userId') as string;
+  const organizationId = (c as any).get('organizationId') as string;
+  const userId = (c as any).get('userId') as string;
   const limit = parseInt(c.req.query('limit') || '50');
   const offset = parseInt(c.req.query('offset') || '0');
 

@@ -7,6 +7,7 @@ import * as vm from 'vm';
 import { ICustomNode, NodeExecutionContext, NodeExecutionResult } from './CustomNodeSDK';
 import { customNodeService } from '../services/customNodeService';
 import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
 
 export class NodeLoader {
   private loadedNodes: Map<string, ICustomNode> = new Map();
@@ -84,9 +85,9 @@ export class NodeLoader {
       module: { exports: {} },
       require: this.createSafeRequire(),
       console: {
-        log: (...args: any[]) => console.log('[CustomNode]', ...args),
-        warn: (...args: any[]) => console.warn('[CustomNode]', ...args),
-        error: (...args: any[]) => console.error('[CustomNode]', ...args)
+        log: (...args: any[]) => logger.info('[CustomNode]', ...args),
+        warn: (...args: any[]) => logger.warn('[CustomNode]', ...args),
+        error: (...args: any[]) => logger.error('[CustomNode]', ...args)
       },
       setTimeout,
       clearTimeout,
@@ -225,7 +226,7 @@ export class NodeLoader {
     
     const loadPromises = installs.map(install =>
       this.loadNode(install.node.name, install.version).catch(err => {
-        console.error(`Failed to preload node ${install.node.name}:`, err);
+        logger.error(`Failed to preload node ${install.node.name}:`, err);
       })
     );
     

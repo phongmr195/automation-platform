@@ -15,6 +15,7 @@ import IORedis from "ioredis";
 import type { Workflow } from "./types";
 import { AdvancedSchedulingService } from "../services/advancedSchedulingService";
 import { ScheduleStatus } from "@prisma/client";
+import { logger } from "../lib/logger";
 
 export class EnhancedWorkflowScheduler {
   private queue: Queue;
@@ -45,7 +46,7 @@ export class EnhancedWorkflowScheduler {
     const scheduleConfig = await AdvancedSchedulingService.getScheduleConfig(workflow.id);
 
     if (!scheduleConfig || !scheduleConfig.enabled) {
-      console.log(`⏭️  No active schedule config for workflow: ${workflow.name}`);
+      logger.info(`⏭️  No active schedule config for workflow: ${workflow.name}`);
       return;
     }
 
@@ -89,23 +90,23 @@ export class EnhancedWorkflowScheduler {
         this.scheduledWorkflows.set(workflow.id, job.key);
       }
 
-      console.log(`✅ Scheduled workflow with advanced features: ${workflow.name}`);
-      console.log(`   Pattern: ${cronExpression}`);
-      console.log(`   Timezone: ${timezone}`);
-      console.log(`   Priority: ${priority}`);
-      console.log(`   Max Concurrent: ${maxConcurrent}`);
+      logger.info(`✅ Scheduled workflow with advanced features: ${workflow.name}`);
+      logger.info(`   Pattern: ${cronExpression}`);
+      logger.info(`   Timezone: ${timezone}`);
+      logger.info(`   Priority: ${priority}`);
+      logger.info(`   Max Concurrent: ${maxConcurrent}`);
       
       if (scheduleConfig.skipHolidays) {
-        console.log(`   Holiday Action: ${scheduleConfig.holidayAction}`);
+        logger.info(`   Holiday Action: ${scheduleConfig.holidayAction}`);
       }
       if (scheduleConfig.businessHoursOnly) {
-        console.log(`   Business Hours Only: Yes`);
+        logger.info(`   Business Hours Only: Yes`);
       }
       if (scheduleConfig.maxExecutionsPerHour) {
-        console.log(`   Rate Limit: ${scheduleConfig.maxExecutionsPerHour}/hour`);
+        logger.info(`   Rate Limit: ${scheduleConfig.maxExecutionsPerHour}/hour`);
       }
     } catch (error) {
-      console.error(`❌ Failed to schedule workflow ${workflow.name}:`, error);
+      logger.error(`❌ Failed to schedule workflow ${workflow.name}:`, error);
       throw error;
     }
   }
@@ -117,16 +118,16 @@ export class EnhancedWorkflowScheduler {
     const jobKey = this.scheduledWorkflows.get(workflowId);
 
     if (!jobKey) {
-      console.log(`⏭️  Workflow ${workflowId} is not scheduled`);
+      logger.info(`⏭️  Workflow ${workflowId} is not scheduled`);
       return;
     }
 
     try {
       await this.queue.removeRepeatableByKey(jobKey);
       this.scheduledWorkflows.delete(workflowId);
-      console.log(`✅ Unscheduled workflow: ${workflowId}`);
+      logger.info(`✅ Unscheduled workflow: ${workflowId}`);
     } catch (error) {
-      console.error(`❌ Failed to unschedule workflow ${workflowId}:`, error);
+      logger.error(`❌ Failed to unschedule workflow ${workflowId}:`, error);
       throw error;
     }
   }
@@ -145,7 +146,7 @@ export class EnhancedWorkflowScheduler {
   private startProcessing(): void {
     // This would be implemented in the worker
     // The worker would call shouldExecuteWorkflow before actually executing
-    console.log('📋 Enhanced scheduler initialized');
+    logger.info('📋 Enhanced scheduler initialized');
   }
 
   /**
@@ -193,15 +194,13 @@ export class EnhancedWorkflowScheduler {
     completed: number;
     failed: number;
     delayed: number;
-    paused: number;
   }> {
-    const [waiting, active, completed, failed, delayed, paused] = await Promise.all([
+    const [waiting, active, completed, failed, delayed] = await Promise.all([
       this.queue.getWaitingCount(),
       this.queue.getActiveCount(),
       this.queue.getCompletedCount(),
       this.queue.getFailedCount(),
       this.queue.getDelayedCount(),
-      this.queue.getPausedCount(),
     ]);
 
     return {
@@ -210,7 +209,6 @@ export class EnhancedWorkflowScheduler {
       completed,
       failed,
       delayed,
-      paused,
     };
   }
 
@@ -238,7 +236,7 @@ export class EnhancedWorkflowScheduler {
    */
   async pause(): Promise<void> {
     await this.queue.pause();
-    console.log('⏸️  Workflow queue paused');
+    logger.info('⏸️  Workflow queue paused');
   }
 
   /**
@@ -246,7 +244,7 @@ export class EnhancedWorkflowScheduler {
    */
   async resume(): Promise<void> {
     await this.queue.resume();
-    console.log('▶️  Workflow queue resumed');
+    logger.info('▶️  Workflow queue resumed');
   }
 
   /**
@@ -260,7 +258,7 @@ export class EnhancedWorkflowScheduler {
     const limit = options.limit || 1000;
 
     const cleaned = await this.queue.clean(grace, limit, 'completed');
-    console.log(`🧹 Cleaned ${cleaned.length} completed jobs`);
+    logger.info(`🧹 Cleaned ${cleaned.length} completed jobs`);
   }
 
   /**
@@ -269,7 +267,7 @@ export class EnhancedWorkflowScheduler {
   async close(): Promise<void> {
     await this.queue.close();
     await this.connection.quit();
-    console.log('🔌 Scheduler connections closed');
+    logger.info('🔌 Scheduler connections closed');
   }
 }
 

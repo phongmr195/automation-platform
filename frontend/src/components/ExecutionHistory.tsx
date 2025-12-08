@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Play, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, Filter, Search } from 'lucide-react';
 import { engineApi } from '../services/api';
 import { toast } from '../utils/alerts';
@@ -21,7 +21,7 @@ interface ExecutionHistoryProps {
   onRetry?: (execution: Execution) => void;
 }
 
-export default function ExecutionHistory({ workflowId, onReplay, onRetry }: ExecutionHistoryProps) {
+function ExecutionHistory({ workflowId, onReplay, onRetry }: ExecutionHistoryProps) {
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -263,3 +263,5 @@ export default function ExecutionHistory({ workflowId, onReplay, onRetry }: Exec
     </div>
   );
 }
+
+export default memo(ExecutionHistory);

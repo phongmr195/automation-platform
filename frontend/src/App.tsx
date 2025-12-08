@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import WorkflowEditor from './components/WorkflowEditor';
+import { lazy, Suspense } from 'react';
 import WorkflowList from './components/WorkflowList';
 import { ConfirmDialogProvider } from './components/ui/ConfirmDialog';
 import { AuthProvider } from './contexts/AuthContext';
@@ -14,12 +14,15 @@ import Register from './pages/Register';
 import OAuthCallback from './pages/OAuthCallback';
 import { CreateOrganization } from './pages/CreateOrganization';
 import { OrganizationSettings } from './pages/OrganizationSettings';
-import { TemplateGallery } from './pages/TemplateGallery';
-import { Analytics } from './pages/Analytics';
-import { Alerts } from './pages/Alerts';
-import Monitoring from './pages/Monitoring';
-import { VersionControl } from './pages/VersionControl';
-import Notifications from './pages/Notifications';
+
+// Lazy load heavy components
+const WorkflowEditor = lazy(() => import('./components/WorkflowEditor'));
+const TemplateGallery = lazy(() => import('./pages/TemplateGallery').then(m => ({ default: m.TemplateGallery })));
+const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })));
+const Alerts = lazy(() => import('./pages/Alerts').then(m => ({ default: m.Alerts })));
+const Monitoring = lazy(() => import('./pages/Monitoring'));
+const VersionControl = lazy(() => import('./pages/VersionControl').then(m => ({ default: m.VersionControl })));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 // Create QueryClient OUTSIDE component to prevent re-creation on every render
 const queryClient = new QueryClient({
@@ -72,7 +75,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 overflow-hidden">
-                          <TemplateGallery />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                            <TemplateGallery />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -82,7 +87,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 overflow-auto">
-                          <Analytics />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                            <Analytics />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -92,7 +99,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 overflow-auto">
-                          <Alerts />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                            <Alerts />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -102,7 +111,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 overflow-auto">
-                          <Monitoring />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                            <Monitoring />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -112,7 +123,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 overflow-auto">
-                          <Notifications />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                            <Notifications />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -142,7 +155,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 flex flex-col overflow-hidden">
-                          <WorkflowEditor />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading editor...</div>}>
+                            <WorkflowEditor />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -152,7 +167,9 @@ export default function App() {
                     element={
                       <ProtectedRoute>
                         <div className="flex-1 flex flex-col overflow-hidden">
-                          <WorkflowEditor />
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading editor...</div>}>
+                            <WorkflowEditor />
+                          </Suspense>
                         </div>
                       </ProtectedRoute>
                     }
@@ -161,7 +178,9 @@ export default function App() {
                     path="/workflows/:workflowId/version-control"
                     element={
                       <ProtectedRoute>
-                        <VersionControl />
+                        <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                          <VersionControl />
+                        </Suspense>
                       </ProtectedRoute>
                     }
                   />

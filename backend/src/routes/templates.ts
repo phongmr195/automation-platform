@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import { templateService } from '../services/templateService';
 import { workflowService } from '../services/workflowService';
+import { cacheMiddleware, templatesCacheKey } from '../middleware/cacheMiddleware';
 
 const app = new Hono();
 
@@ -13,7 +14,7 @@ const app = new Hono();
  * GET /templates
  * Get all templates with optional filtering
  */
-app.get('/', async (c) => {
+app.get('/', cacheMiddleware({ ttl: 600, keyGenerator: templatesCacheKey }), async (c) => {
   try {
     const category = c.req.query('category');
     const difficulty = c.req.query('difficulty');
@@ -45,7 +46,7 @@ app.get('/', async (c) => {
  * GET /templates/featured
  * Get featured templates
  */
-app.get('/featured', async (c) => {
+app.get('/featured', cacheMiddleware({ ttl: 600 }), async (c) => {
   try {
     const templates = await templateService.getFeaturedTemplates();
     return c.json({ templates });

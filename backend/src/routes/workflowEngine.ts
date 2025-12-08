@@ -334,8 +334,8 @@ app.post('/executions/:executionId/replay', async (c) => {
     // Use the snapshot from the original execution to replay with exact same definition
     const workflowSnapshot: Workflow = {
       ...workflow,
-      nodes: execution.definitionSnapshot.nodes || workflow.nodes,
-      connections: execution.definitionSnapshot.connections || workflow.connections,
+      nodes: (execution.definitionSnapshot as any)?.nodes || workflow.nodes,
+      connections: (execution.definitionSnapshot as any)?.connections || workflow.connections,
     };
 
     // Create new execution record
@@ -583,6 +583,7 @@ app.post('/nodes/test', async (c) => {
       type: nodeType,
       data: {
         service: nodeType,
+        operation: 'test',
         parameters: parameters || {},
       },
       position: { x: 0, y: 0 },
@@ -606,6 +607,11 @@ app.post('/nodes/test', async (c) => {
 
     // Execute test (with mock context)
     const context = {
+      workflowId: 'test-workflow',
+      executionId: 'test-execution',
+      trigger: { type: 'test' },
+      nodeData: new Map<string, any>(),
+      startedAt: new Date(),
       nodes: {},
       variables: {},
       input: {},

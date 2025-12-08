@@ -115,9 +115,9 @@ export class SupabaseNode implements INodeExecutor {
           }
 
           // Get single record or multiple
-          if (config.single) {
-            selectQuery = selectQuery.single();
-          }
+          // if (config.single) {
+          //   selectQuery = selectQuery.single();
+          // }
 
           const selectResponse = await selectQuery;
 

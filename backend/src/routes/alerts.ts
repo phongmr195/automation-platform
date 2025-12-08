@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { alertService } from '../services/alertService';
 import { authMiddleware } from '../middleware/auth';
+import { logger } from '../lib/logger';
 
 const alerts = new Hono();
 
@@ -32,7 +33,7 @@ alerts.get('/rules', async (c) => {
     const rules = await alertService.getRules(organizationId, workflowId);
     return c.json(rules);
   } catch (error) {
-    console.error('Get alert rules error:', error);
+    logger.error('Get alert rules error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to get alert rules' },
       500
@@ -74,9 +75,9 @@ alerts.post('/rules', async (c) => {
     const rule = await alertService.createRule(validated);
     return c.json(rule, 201);
   } catch (error) {
-    console.error('Create alert rule error:', error);
-    if (error instanceof z.ZodError) {
-      return c.json({ error: 'Validation error', details: error.errors }, 400);
+    logger.error('Create alert rule error:', error);
+      if (error instanceof z.ZodError) {
+        return c.json({ error: 'Validation error', details: error.issues }, 400);
     }
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to create alert rule' },
@@ -125,9 +126,9 @@ alerts.put('/rules/:id', async (c) => {
     
     return c.json(rule);
   } catch (error) {
-    console.error('Update alert rule error:', error);
-    if (error instanceof z.ZodError) {
-      return c.json({ error: 'Validation error', details: error.errors }, 400);
+    logger.error('Update alert rule error:', error);
+      if (error instanceof z.ZodError) {
+        return c.json({ error: 'Validation error', details: error.issues }, 400);
     }
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to update alert rule' },
@@ -152,7 +153,7 @@ alerts.delete('/rules/:id', async (c) => {
     await alertService.deleteRule(ruleId, organizationId);
     return c.json({ success: true });
   } catch (error) {
-    console.error('Delete alert rule error:', error);
+    logger.error('Delete alert rule error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to delete alert rule' },
       500
@@ -182,7 +183,7 @@ alerts.get('/channels', async (c) => {
     );
     return c.json(channels);
   } catch (error) {
-    console.error('Get alert channels error:', error);
+    logger.error('Get alert channels error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to get alert channels' },
       500
@@ -211,9 +212,9 @@ alerts.post('/channels', async (c) => {
     const channel = await alertService.createChannel(validated);
     return c.json(channel, 201);
   } catch (error) {
-    console.error('Create alert channel error:', error);
-    if (error instanceof z.ZodError) {
-      return c.json({ error: 'Validation error', details: error.errors }, 400);
+    logger.error('Create alert channel error:', error);
+      if (error instanceof z.ZodError) {
+        return c.json({ error: 'Validation error', details: error.issues }, 400);
     }
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to create alert channel' },
@@ -249,9 +250,9 @@ alerts.put('/channels/:id', async (c) => {
     
     return c.json(channel);
   } catch (error) {
-    console.error('Update alert channel error:', error);
-    if (error instanceof z.ZodError) {
-      return c.json({ error: 'Validation error', details: error.errors }, 400);
+    logger.error('Update alert channel error:', error);
+      if (error instanceof z.ZodError) {
+        return c.json({ error: 'Validation error', details: error.issues }, 400);
     }
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to update alert channel' },
@@ -276,7 +277,7 @@ alerts.delete('/channels/:id', async (c) => {
     await alertService.deleteChannel(channelId, organizationId);
     return c.json({ success: true });
   } catch (error) {
-    console.error('Delete alert channel error:', error);
+    logger.error('Delete alert channel error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to delete alert channel' },
       500
@@ -300,7 +301,7 @@ alerts.post('/channels/:id/test', async (c) => {
     const success = await alertService.testChannel(channelId, organizationId);
     return c.json({ success });
   } catch (error) {
-    console.error('Test alert channel error:', error);
+    logger.error('Test alert channel error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to test alert channel' },
       500
@@ -334,7 +335,7 @@ alerts.get('/history', async (c) => {
 
     return c.json(history);
   } catch (error) {
-    console.error('Get alert history error:', error);
+    logger.error('Get alert history error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to get alert history' },
       500
@@ -349,12 +350,14 @@ alerts.get('/history', async (c) => {
 alerts.post('/history/:id/acknowledge', async (c) => {
   try {
     const alertId = c.req.param('id');
-    const user = c.get('user');
-
-    const alert = await alertService.acknowledgeAlert(alertId, user.id);
+    const userId = (c as any).get('userId') as string | undefined;
+    if (!userId) {
+      return c.json({ error: 'User not found' }, 401);
+    }
+    const alert = await alertService.acknowledgeAlert(alertId, userId);
     return c.json(alert);
   } catch (error) {
-    console.error('Acknowledge alert error:', error);
+    logger.error('Acknowledge alert error:', error);
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to acknowledge alert' },
       500
@@ -383,9 +386,9 @@ alerts.post('/trigger', async (c) => {
     const alert = await alertService.triggerAlert(validated);
     return c.json(alert);
   } catch (error) {
-    console.error('Trigger alert error:', error);
-    if (error instanceof z.ZodError) {
-      return c.json({ error: 'Validation error', details: error.errors }, 400);
+    logger.error('Trigger alert error:', error);
+      if (error instanceof z.ZodError) {
+        return c.json({ error: 'Validation error', details: error.issues }, 400);
     }
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to trigger alert' },
@@ -421,9 +424,9 @@ alerts.post('/evaluate', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Evaluate alerts error:', error);
-    if (error instanceof z.ZodError) {
-      return c.json({ error: 'Validation error', details: error.errors }, 400);
+    logger.error('Evaluate alerts error:', error);
+      if (error instanceof z.ZodError) {
+        return c.json({ error: 'Validation error', details: error.issues }, 400);
     }
     return c.json(
       { error: error instanceof Error ? error.message : 'Failed to evaluate alerts' },

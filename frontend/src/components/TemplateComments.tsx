@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { marketplaceApi } from '../services/marketplaceApi';
 import type { Comment } from '../services/marketplaceApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ interface TemplateCommentsProps {
   templateId: string;
 }
 
-export const TemplateComments: React.FC<TemplateCommentsProps> = ({ templateId }) => {
+const TemplateComments: React.FC<TemplateCommentsProps> = ({ templateId }) => {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -330,3 +330,5 @@ export const TemplateComments: React.FC<TemplateCommentsProps> = ({ templateId }
     </div>
   );
 };
+
+export default memo(TemplateComments);

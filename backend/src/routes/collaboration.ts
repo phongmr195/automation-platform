@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { collaborationService } from '../services/collaborationService';
 import type { CollaboratorPermission } from '@prisma/client';
-import prisma from '../../shared/prisma';
 import { authMiddleware } from '../middleware/auth';
 
 const app = new Hono();
@@ -36,7 +35,7 @@ app.post('/workflows/:workflowId/collaborators', async (c) => {
   try {
     const { workflowId } = c.req.param();
     const { userId, permission } = await c.req.json();
-    const invitedBy = c.get('userId') as string;
+    const invitedBy = (c as any).get('userId') as string;
 
     if (!userId || !permission) {
       return c.json({ error: 'userId and permission are required' }, 400);
@@ -63,7 +62,7 @@ app.post('/workflows/:workflowId/collaborators', async (c) => {
 app.delete('/workflows/:workflowId/collaborators/:userId', async (c) => {
   try {
     const { workflowId, userId } = c.req.param();
-    const removedBy = c.get('userId') as string;
+    const removedBy = (c as any).get('userId') as string;
 
     const result = await collaborationService.removeCollaborator(workflowId, userId, removedBy);
     return c.json(result);
@@ -149,7 +148,7 @@ app.get('/workflows/:workflowId/comments', async (c) => {
   try {
     const { workflowId } = c.req.param();
     const query = c.req.query();
-    
+
     const options = {
       nodeId: query.nodeId,
       parentId: query.parentId === 'null' ? null : query.parentId,
@@ -173,7 +172,7 @@ app.get('/workflows/:workflowId/comments', async (c) => {
 app.post('/workflows/:workflowId/comments', async (c) => {
   try {
     const { workflowId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
     const { content, nodeId, position, parentId } = await c.req.json();
 
     if (!content || !content.trim()) {
@@ -203,7 +202,7 @@ app.post('/workflows/:workflowId/comments', async (c) => {
 app.put('/comments/:commentId', async (c) => {
   try {
     const { commentId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
     const { content } = await c.req.json();
 
     if (!content || !content.trim()) {
@@ -225,7 +224,7 @@ app.put('/comments/:commentId', async (c) => {
 app.delete('/comments/:commentId', async (c) => {
   try {
     const { commentId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
 
     const result = await collaborationService.deleteComment(commentId, userId);
     return c.json(result);
@@ -242,7 +241,7 @@ app.delete('/comments/:commentId', async (c) => {
 app.post('/comments/:commentId/resolve', async (c) => {
   try {
     const { commentId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
 
     const comment = await collaborationService.resolveComment(commentId, userId);
     return c.json(comment);
@@ -259,7 +258,7 @@ app.post('/comments/:commentId/resolve', async (c) => {
 app.post('/comments/:commentId/reactions', async (c) => {
   try {
     const { commentId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
     const { emoji } = await c.req.json();
 
     if (!emoji) {
@@ -311,7 +310,7 @@ app.get('/workflows/:workflowId/activity', async (c) => {
  */
 app.get('/notifications', async (c) => {
   try {
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
     const query = c.req.query();
 
     const options = {
@@ -336,7 +335,7 @@ app.get('/notifications', async (c) => {
 app.put('/notifications/:notificationId/read', async (c) => {
   try {
     const { notificationId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
 
     const notification = await collaborationService.markNotificationAsRead(notificationId, userId);
     return c.json(notification);
@@ -352,7 +351,7 @@ app.put('/notifications/:notificationId/read', async (c) => {
  */
 app.post('/notifications/read-all', async (c) => {
   try {
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
     const { workflowId } = await c.req.json();
 
     const result = await collaborationService.markAllAsRead(userId, workflowId);
@@ -370,7 +369,7 @@ app.post('/notifications/read-all', async (c) => {
 app.delete('/notifications/:notificationId', async (c) => {
   try {
     const { notificationId } = c.req.param();
-    const userId = c.get('userId') as string;
+    const userId = (c as any).get('userId') as string;
 
     const result = await collaborationService.dismissNotification(notificationId, userId);
     return c.json(result);

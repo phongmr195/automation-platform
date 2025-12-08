@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { Server } from "node:http";
 import IORedis from "ioredis";
+import { logger } from "./lib/logger"; // Import the logger
 
 interface Client {
   ws: WebSocket;
@@ -35,7 +36,7 @@ export class ExecutionWebSocketServer {
     this.setupRedisSubscription();
     this.setupWebSocketServer();
 
-    console.log("[WebSocket] Server initialized on /ws");
+    logger.info("[WebSocket] Server initialized on /ws");
   }
 
   /**
@@ -44,9 +45,9 @@ export class ExecutionWebSocketServer {
   private setupRedisSubscription() {
     this.redis.subscribe("execution:events", "collaboration:events", (err) => {
       if (err) {
-        console.error("[WebSocket] Failed to subscribe to Redis:", err);
+        logger.error("[WebSocket] Failed to subscribe to Redis:", err);
       } else {
-        console.log("[WebSocket] Subscribed to execution:events and collaboration:events channels");
+        logger.info("[WebSocket] Subscribed to execution:events and collaboration:events channels");
       }
     });
 
@@ -56,20 +57,20 @@ export class ExecutionWebSocketServer {
           const { event, data } = JSON.parse(message);
           this.broadcastEvent(event, data);
         } catch (err) {
-          console.error("[WebSocket] Failed to parse event:", err);
+          logger.error("[WebSocket] Failed to parse event:", err);
         }
       } else if (channel === "collaboration:events") {
         try {
           const eventData = JSON.parse(message);
           this.broadcastCollaborationEvent(eventData);
         } catch (err) {
-          console.error("[WebSocket] Failed to parse collaboration event:", err);
+          logger.error("[WebSocket] Failed to parse collaboration event:", err);
         }
       }
     });
 
     this.redis.on("error", (err) => {
-      console.error("[WebSocket] Redis error:", err.message);
+      logger.error("[WebSocket] Redis error:", err.message);
     });
   }
 
@@ -87,7 +88,7 @@ export class ExecutionWebSocketServer {
       };
       this.clients.set(clientId, client);
 
-      console.log(
+      logger.info(
         `[WebSocket] Client ${clientId} connected (total: ${this.clients.size})`
       );
 
@@ -105,7 +106,7 @@ export class ExecutionWebSocketServer {
           const message = JSON.parse(messageStr);
           this.handleClientMessage(clientId, message);
         } catch (err) {
-          console.error("[WebSocket] Failed to parse client message:", err);
+          logger.error("[WebSocket] Failed to parse client message:", err);
           ws.send(
             JSON.stringify({
               type: "error",
@@ -118,14 +119,14 @@ export class ExecutionWebSocketServer {
       // Handle client disconnect
       ws.on("close", () => {
         this.clients.delete(clientId);
-        console.log(
+        logger.info(
           `[WebSocket] Client ${clientId} disconnected (total: ${this.clients.size})`
         );
       });
 
       // Handle errors
       ws.on("error", (err) => {
-        console.error(`[WebSocket] Client ${clientId} error:`, err.message);
+        logger.error(`[WebSocket] Client ${clientId} error:`, err.message);
       });
 
       // Send welcome message
@@ -139,7 +140,7 @@ export class ExecutionWebSocketServer {
     });
 
     this.wss.on("error", (err) => {
-      console.error("[WebSocket] Server error:", err);
+      logger.error("[WebSocket] Server error:", err);
     });
   }
 
@@ -155,7 +156,7 @@ export class ExecutionWebSocketServer {
         // Subscribe to specific execution
         if (message.executionId) {
           client.executionIds.add(message.executionId);
-          console.log(
+          logger.info(
             `[WebSocket] Client ${clientId} subscribed to execution ${message.executionId}`
           );
           client.ws.send(
@@ -172,7 +173,7 @@ export class ExecutionWebSocketServer {
         // Unsubscribe from specific execution
         if (message.executionId) {
           client.executionIds.delete(message.executionId);
-          console.log(
+          logger.info(
             `[WebSocket] Client ${clientId} unsubscribed from execution ${message.executionId}`
           );
           client.ws.send(
@@ -190,7 +191,7 @@ export class ExecutionWebSocketServer {
         if (message.workflowId && message.userId) {
           client.workflowIds.add(message.workflowId);
           client.userId = message.userId;
-          console.log(
+          logger.info(
             `[WebSocket] Client ${clientId} (user: ${message.userId}) joined workflow ${message.workflowId}`
           );
           client.ws.send(
@@ -207,7 +208,7 @@ export class ExecutionWebSocketServer {
         // Leave workflow collaboration room
         if (message.workflowId) {
           client.workflowIds.delete(message.workflowId);
-          console.log(
+          logger.info(
             `[WebSocket] Client ${clientId} left workflow ${message.workflowId}`
           );
           client.ws.send(
@@ -231,7 +232,7 @@ export class ExecutionWebSocketServer {
         break;
 
       default:
-        console.warn(`[WebSocket] Unknown message type: ${message.type}`);
+        logger.warn(`[WebSocket] Unknown message type: ${message.type}`);
     }
   }
 
@@ -264,7 +265,7 @@ export class ExecutionWebSocketServer {
     }
 
     if (sentCount > 0) {
-      console.log(`[WebSocket] Broadcast ${event} to ${sentCount} client(s)`);
+      logger.info(`[WebSocket] Broadcast ${event} to ${sentCount} client(s)`);
     }
   }
 
@@ -309,7 +310,7 @@ export class ExecutionWebSocketServer {
     }
 
     if (sentCount > 0) {
-      console.log(`[WebSocket] Broadcast collaboration event ${type} to ${sentCount} client(s)`);
+      logger.info(`[WebSocket] Broadcast collaboration event ${type} to ${sentCount} client(s)`);
     }
   }
 
@@ -338,7 +339,7 @@ export class ExecutionWebSocketServer {
    * Cleanup and close server
    */
   async close() {
-    console.log("[WebSocket] Closing server...");
+    logger.info("[WebSocket] Closing server...");
 
     // Close all client connections
     for (const client of this.clients.values()) {
@@ -355,7 +356,7 @@ export class ExecutionWebSocketServer {
     }).then(async () => {
       // Close Redis connection
       await this.redis.quit();
-      console.log("[WebSocket] Server closed");
+      logger.info("[WebSocket] Server closed");
     });
   }
 }

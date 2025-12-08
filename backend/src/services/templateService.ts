@@ -91,7 +91,30 @@ export const templateService = {
 
     return prisma.workflowTemplate.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        nodes: true,
+        connections: true,
+        triggers: true,
+        settings: true,
+        description: true,
+        category: true,
+        tags: true,
+        icon: true,
+        difficulty: true,
+        estimatedTime: true,
+        featured: true,
+        installCount: true,
+        rating: true,
+        version: true,
+        published: true,
+        publishedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        authorId: true,
+        requiredParams: true,
+        changelog: true,
         author: {
           select: {
             id: true,

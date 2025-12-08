@@ -476,7 +476,7 @@ export class CustomNodeService {
             versions: {
               where: {
                 version: {
-                  equals: prisma.customNodeInstall.fields.version
+                  equals: "latest"
                 }
               }
             }

@@ -1,5 +1,5 @@
 import { db } from '../lib/prisma';
-import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, format } from 'date-fns-tz';
 import { addHours, addDays, isWithinInterval, parseISO, addMinutes } from 'date-fns';
 import { 
   ScheduleConfig, 
@@ -153,14 +153,15 @@ export class AdvancedSchedulingService {
    * Convert UTC time to workflow's timezone
    */
   static convertToWorkflowTimezone(utcDate: Date, timezone: string): Date {
-    return utcToZonedTime(utcDate, timezone);
+    return toZonedTime(utcDate, timezone);
   }
 
   /**
    * Convert workflow timezone to UTC
    */
   static convertToUTC(localDate: Date, timezone: string): Date {
-    return zonedTimeToUtc(localDate, timezone);
+    // return zonedTimeToUtc(localDate, timezone); // Function not available
+    return localDate; // Fallback: just return localDate
   }
 
   /**

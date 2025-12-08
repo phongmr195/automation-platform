@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 import type { CollaboratorPermission, NotificationType } from '@prisma/client';
 import IORedis from 'ioredis';
+import { logger } from '../lib/logger';
 
 // Initialize Redis for real-time events
 const redis = new IORedis(
@@ -136,7 +137,13 @@ export class CollaborationService {
   async getCollaborators(workflowId: string) {
     const collaborators = await prisma.workflowCollaborator.findMany({
       where: { workflowId },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        permission: true,
+        invitedBy: true,
+        invitedAt: true,
+        isActive: true,
         user: {
           select: {
             id: true,
@@ -184,7 +191,7 @@ export class CollaborationService {
     await this.emitRealtimeEvent('collaboration', {
       type: 'collaborator.permission_updated',
       workflowId,
-      userId: updatedBy,
+      userId: collaborator.id,
       data: collaborator,
     });
 
@@ -964,7 +971,7 @@ export class CollaborationService {
         })
       );
     } catch (error) {
-      console.error('[Collaboration] Failed to emit real-time event:', error);
+      logger.error('[Collaboration] Failed to emit real-time event:', error);
     }
   }
 }

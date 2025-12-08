@@ -4,6 +4,8 @@ import { Queue } from "bullmq";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { WorkflowDefinitionSchema } from "../schemas/workflow";
+import { cacheService } from "../services/cacheService";
+import { cacheMiddleware } from "../middleware/cacheMiddleware";
 
 export const workflowRoutes = (opts: {
   prisma: PrismaClient;
@@ -72,12 +74,15 @@ export const workflowRoutes = (opts: {
         },
       });
 
+      // Invalidate workflows list cache
+      await cacheService.delPattern('workflows:list:*');
+
       return c.json(workflow);
     }
   );
 
   // LIST WORKFLOWS with Search, Filter, Sort, and Pagination
-  router.get("/", async (c) => {
+  router.get("/", cacheMiddleware({ ttl: 300 }), async (c) => {
     // Get query parameters
     const search = c.req.query("search") || "";
     const status = c.req.query("status") || ""; // all, published, draft
@@ -141,10 +146,24 @@ export const workflowRoutes = (opts: {
     // Fetch workflows with relations and counts
     const workflows = await prisma.workflow.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        starred: true,
+        folderId: true,
+        createdAt: true,
+        updatedAt: true,
         versions: {
           orderBy: { versionNumber: "desc" },
-          take: 1, // Only get latest version
+          take: 1,
+          select: {
+            id: true,
+            versionNumber: true,
+            isDraft: true,
+            definition: true,
+            createdAt: true,
+          },
         },
         _count: {
           select: {
@@ -230,6 +249,10 @@ export const workflowRoutes = (opts: {
         },
       });
 
+      // Invalidate caches
+      await cacheService.invalidateWorkflow(id);
+      await cacheService.delPattern('workflows:list:*');
+
       return c.json(wf);
     }
   );
@@ -251,6 +274,10 @@ export const workflowRoutes = (opts: {
     
     // 3. Delete workflow versions (no longer referenced by commits)
     await prisma.workflowVersion.deleteMany({ where: { workflowId: id } });
+    
+    // Invalidate caches before deletion
+    await cacheService.invalidateWorkflow(id);
+    await cacheService.delPattern('workflows:list:*');
     
     // 4. Finally delete the workflow itself
     await prisma.workflow.delete({ where: { id } });
