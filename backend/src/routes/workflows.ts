@@ -47,6 +47,7 @@ export const workflowRoutes = (opts: {
       z.object({
         name: z.string(),
         definition: WorkflowDefinitionSchema,
+        folderId: z.string().optional(),
       })
     ),
     async (c) => {
@@ -57,6 +58,7 @@ export const workflowRoutes = (opts: {
       const workflow = await prisma.workflow.create({
         data: {
           name: body.name,
+          folderId: body.folderId || null,
           versions: {
             create: {
               versionNumber: 1,
@@ -196,6 +198,7 @@ export const workflowRoutes = (opts: {
       z.object({
         name: z.string(),
         definition: WorkflowDefinitionSchema,
+        folderId: z.string().optional().nullable(),
       })
     ),
     async (c) => {
@@ -213,6 +216,7 @@ export const workflowRoutes = (opts: {
         where: { id },
         data: {
           name: body.name,
+          ...(body.folderId !== undefined && { folderId: body.folderId }),
           versions: {
             create: {
               versionNumber: (latestVersion?.versionNumber ?? 0) + 1,

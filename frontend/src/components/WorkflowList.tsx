@@ -50,8 +50,8 @@ export default function WorkflowList() {
 
   // Build query parameters with useMemo to prevent unnecessary re-renders
   const queryKey = useMemo(
-    () => ["workflows", search, status, sortBy, order, page],
-    [search, status, sortBy, order, page]
+    () => ["workflows", search, status, sortBy, order, page, selectedFolder, showFavorites],
+    [search, status, sortBy, order, page, selectedFolder, showFavorites]
   );
 
   const queryString = useMemo(() => {
@@ -312,7 +312,10 @@ export default function WorkflowList() {
       <FolderList
         folders={folders}
         selectedFolder={selectedFolder}
-        onSelectFolder={setSelectedFolder}
+        onSelectFolder={(folderId) => {
+          setSelectedFolder(folderId);
+          setPage(1); // Reset to first page when changing folder
+        }}
         onCreateFolder={handleCreateFolder}
       />
 
@@ -336,11 +339,21 @@ export default function WorkflowList() {
                   onCreateFolder={handleCreateFolder}
                 />
                 <button
-                  onClick={() => navigate("/editor")}
+                  onClick={() => {
+                    const url = selectedFolder 
+                      ? `/editor?folderId=${selectedFolder}`
+                      : '/editor';
+                    navigate(url);
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-5 h-5" />
                   New Workflow
+                  {selectedFolder && (
+                    <span className="text-xs bg-blue-700 px-2 py-0.5 rounded">
+                      in folder
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -397,11 +410,21 @@ export default function WorkflowList() {
               </p>
               {!search && status === "all" && (
                 <button
-                  onClick={() => navigate("/editor")}
+                  onClick={() => {
+                    const url = selectedFolder 
+                      ? `/editor?folderId=${selectedFolder}`
+                      : '/editor';
+                    navigate(url);
+                  }}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-5 h-5" />
                   Create Workflow
+                  {selectedFolder && (
+                    <span className="text-xs bg-blue-700 px-2 py-0.5 rounded ml-1">
+                      in folder
+                    </span>
+                  )}
                 </button>
               )}
             </div>
