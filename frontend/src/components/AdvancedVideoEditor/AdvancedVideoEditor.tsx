@@ -14,12 +14,13 @@ export const AdvancedVideoEditor: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [exporting, setExporting] = useState(false);
-  
+
   const { 
     setVideoSrc, 
     setDuration, 
     elements, 
-    currentTime, 
+    currentTime,
+    duration,
     playing,
     play,
     pause,
@@ -30,9 +31,9 @@ export const AdvancedVideoEditor: React.FC = () => {
   // Sync video playback with timeline
   useEffect(() => {
     if (!videoRef.current || !videoSrc) return;
-    
+
     const video = videoRef.current;
-    
+
     if (playing) {
       video.play().catch(err => {
         console.log('Video play error:', err);
@@ -54,25 +55,57 @@ export const AdvancedVideoEditor: React.FC = () => {
   // Update timeline when video plays
   useEffect(() => {
     if (!videoRef.current || !playing) return;
-    
+
     const video = videoRef.current;
     let animationFrame: number;
-    
+
     const updateTime = () => {
       if (video && !video.paused) {
         seek(video.currentTime);
         animationFrame = requestAnimationFrame(updateTime);
       }
     };
-    
+
     animationFrame = requestAnimationFrame(updateTime);
-    
+
     return () => {
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
       }
     };
   }, [playing, seek]);
+
+  // Update timeline when playing without video (elements only)
+  useEffect(() => {
+    if (videoSrc || !playing) return; // Only run when no video
+
+    let animationFrame: number;
+    let lastTime = performance.now();
+
+    const updateTime = () => {
+      const now = performance.now();
+      const deltaTime = (now - lastTime) / 1000; // Convert to seconds
+      lastTime = now;
+
+      const newTime = currentTime + deltaTime;
+
+      if (newTime >= duration) {
+        pause();
+        seek(duration);
+      } else {
+        seek(newTime);
+        animationFrame = requestAnimationFrame(updateTime);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(updateTime);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [playing, currentTime, duration, videoSrc, seek, pause]);
 
   const handleUploadVideo = () => {
     fileInputRef.current?.click();
@@ -81,10 +114,10 @@ export const AdvancedVideoEditor: React.FC = () => {
   const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const url = URL.createObjectURL(file);
     setVideoSrc(url);
-    
+
     const tempVideo = document.createElement('video');
     tempVideo.src = url;
     tempVideo.onloadedmetadata = () => {
@@ -104,7 +137,7 @@ export const AdvancedVideoEditor: React.FC = () => {
     } else {
       toast.info('🎬 Exporting video with effects...');
     }
-    
+
     setExporting(true);
 
     try {
@@ -121,15 +154,15 @@ export const AdvancedVideoEditor: React.FC = () => {
       };
 
       console.log('🎬 Sending export request...');
-      
+
       const response = await axios.post(`${API_BASE}/video-export/export`, exportData, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 300000,
       });
-      
+
       if (response.data.success) {
         toast.success('✅ Video exported successfully!');
-        
+
         const downloadUrl = `${API_BASE}${response.data.url}`;
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -137,15 +170,15 @@ export const AdvancedVideoEditor: React.FC = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         toast.success(`📥 Downloading: ${response.data.filename}`);
       } else {
         throw new Error(response.data.message || 'Export failed');
       }
-      
+
     } catch (error: any) {
       console.error('❌ Export error:', error);
-      
+
       if (error.response?.data?.message) {
         toast.error(`Export failed: ${error.response.data.message}`);
       } else if (error.message.includes('timeout')) {
@@ -155,7 +188,7 @@ export const AdvancedVideoEditor: React.FC = () => {
       } else {
         toast.error('Export failed. Check console.');
       }
-      
+
       toast.info('💾 Saving as JSON instead...');
       const dataStr = JSON.stringify({
         elements,
@@ -166,14 +199,14 @@ export const AdvancedVideoEditor: React.FC = () => {
       }, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `video-project-${Date.now()}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success('✅ Project saved as JSON');
     } finally {
       setExporting(false);
@@ -188,18 +221,18 @@ export const AdvancedVideoEditor: React.FC = () => {
       duration: useEditorStore.getState().duration,
       videoSrc: useEditorStore.getState().videoSrc,
     };
-    
+
     const dataStr = JSON.stringify(projectData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `video-project-${Date.now()}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success('Project saved!');
   };
 

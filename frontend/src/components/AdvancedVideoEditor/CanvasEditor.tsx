@@ -324,7 +324,7 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
         className="shadow-2xl"
       >
         {/* Video Background */}
-        {videoSrc && videoRef?.current && (
+        {videoSrc && videoRef && (
           <div
             style={{
               position: 'absolute',
@@ -345,6 +345,7 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
                 backgroundColor: '#000',
               }}
               muted
+              playsInline
             />
           </div>
         )}
