@@ -23,6 +23,8 @@ const Alerts = lazy(() => import('./pages/Alerts').then(m => ({ default: m.Alert
 const Monitoring = lazy(() => import('./pages/Monitoring'));
 const VersionControl = lazy(() => import('./pages/VersionControl').then(m => ({ default: m.VersionControl })));
 const Notifications = lazy(() => import('./pages/Notifications'));
+const VideoEditor = lazy(() => import('./components/VideoEditor'));
+const AdvancedVideoEditor = lazy(() => import('./components/AdvancedVideoEditor'));
 
 // Create QueryClient OUTSIDE component to prevent re-creation on every render
 const queryClient = new QueryClient({
@@ -180,6 +182,28 @@ export default function App() {
                       <ProtectedRoute>
                         <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
                           <VersionControl />
+                        </Suspense>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/video-editor"
+                    element={
+                      <ProtectedRoute>
+                        <div className="flex-1 overflow-auto">
+                          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
+                            <VideoEditor />
+                          </Suspense>
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/video-editor-pro"
+                    element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="text-lg">Loading...</div></div>}>
+                          <AdvancedVideoEditor />
                         </Suspense>
                       </ProtectedRoute>
                     }

@@ -80,7 +80,22 @@ export default function Navbar() {
                   Analytics
                 </Link>
 
+
+                {/* Video Editor Link */}
+                <Link
+                  to="/video-editor"
+                  className={getLinkClass('/video-editor')}
+                >
+                  🎬 Video Editor
+                </Link>
+
                 {/* Alerts Link */}
+                <Link
+                  to="/video-editor-pro"
+                  className="px-4 py-2 rounded-md text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium"
+                >
+                  ⭐ Video Studio Pro
+                </Link>
                 <Link
                   to="/alerts"
                   className={getLinkClass('/alerts')}

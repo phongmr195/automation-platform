@@ -82,7 +82,6 @@ app.route("/engine", workflowEngineRoutes);
 app.route("/templates", templateRoutes);
 app.route("/marketplace", marketplaceRoutes);
 app.route("/video-editor", videoEditorRoutes);
-app.route("/video-export", videoEditorExportRoutes);
 app.route("/media", mediaRoutes);
 app.route("/custom-nodes", customNodesRoutes);
 app.route("/analytics", analyticsRoutes);

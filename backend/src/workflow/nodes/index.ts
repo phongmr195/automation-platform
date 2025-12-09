@@ -38,6 +38,9 @@ import { FirebaseNode } from './FirebaseNode';
 // Productivity Nodes
 import { GoogleSheetsNode } from './GoogleSheetsNode';
 import { NotionNode } from './NotionNode';
+
+// Media Nodes
+import { VideoEditorNode } from './VideoEditorNode';
 import { TrelloNode } from './TrelloNode';
 
 /**
@@ -676,6 +679,24 @@ export function registerAllNodes(): void {
     ],
   });
 
+
+  // Video Editor Node
+  nodeRegistry.register({
+    type: 'video-editor',
+    category: 'media',
+    name: 'Video Editor',
+    description: 'Edit videos: create from images, add text/overlays, crop, trim, add audio, merge, and convert',
+    executor: VideoEditorNode,
+    inputs: [
+      { name: 'trigger', type: 'trigger', required: false },
+      { name: 'inputVideoPath', type: 'string', required: false },
+      { name: 'imagePaths', type: 'array', required: false }
+    ],
+    outputs: [
+      { name: 'outputPath', type: 'string' },
+      { name: 'metadata', type: 'object' }
+    ],
+  });
   console.log(`\n📦 Registered ${nodeRegistry.getAllNodes().length} workflow nodes`);
 }
 

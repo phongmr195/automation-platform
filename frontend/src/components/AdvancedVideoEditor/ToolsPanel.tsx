@@ -1,0 +1,132 @@
+import React, { useRef } from 'react';
+import { Type, Image, Square, Circle, Music, FileVideo, Layout } from 'lucide-react';
+import { useEditorStore } from './store';
+import type { TextElement, ImageElement, ShapeElement } from './types';
+import { toast } from '../../utils/alerts';
+
+export const ToolsPanel: React.FC = () => {
+  const addElement = useEditorStore((state) => state.addElement);
+  const canvasWidth = useEditorStore((state) => state.canvasWidth);
+  const canvasHeight = useEditorStore((state) => state.canvasHeight);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const addText = () => {
+    const textElement: TextElement = {
+      id: `text-${Date.now()}`,
+      type: 'text',
+      text: 'Double click to edit',
+      x: canvasWidth / 2 - 100,
+      y: canvasHeight / 2 - 25,
+      width: 200,
+      height: 50,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      startTime: 0,
+      duration: 5,
+      zIndex: 1,
+      fontSize: 48,
+      fontFamily: 'Arial',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      color: '#ffffff',
+      textAlign: 'center',
+      lineHeight: 1.2,
+      letterSpacing: 0,
+    };
+    addElement(textElement);
+    toast.success('Text added');
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageElement: ImageElement = {
+          id: `image-${Date.now()}`,
+          type: 'image',
+          src: event.target?.result as string,
+          x: canvasWidth / 2 - 100,
+          y: canvasHeight / 2 - 100,
+          width: 200,
+          height: 200,
+          rotation: 0,
+          opacity: 1,
+          visible: true,
+          locked: false,
+          startTime: 0,
+          duration: 5,
+          zIndex: 0,
+        };
+        addElement(imageElement);
+        toast.success('Image added');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addShape = (shapeType: 'rectangle' | 'circle') => {
+    const shapeElement: ShapeElement = {
+      id: `shape-${Date.now()}`,
+      type: 'shape',
+      shapeType,
+      x: canvasWidth / 2 - 50,
+      y: canvasHeight / 2 - 50,
+      width: 100,
+      height: 100,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      startTime: 0,
+      duration: 5,
+      zIndex: 0,
+      fill: '#3B82F6',
+      stroke: '#ffffff',
+      strokeWidth: 2,
+    };
+    addElement(shapeElement);
+    toast.success(`${shapeType} added`);
+  };
+
+  const tools = [
+    { icon: Type, label: 'Text', action: addText, color: 'purple' },
+    { icon: Image, label: 'Image', action: () => imageInputRef.current?.click(), color: 'blue' },
+    { icon: Square, label: 'Rectangle', action: () => addShape('rectangle'), color: 'green' },
+    { icon: Circle, label: 'Circle', action: () => addShape('circle'), color: 'yellow' },
+    { icon: Music, label: 'Audio', action: () => toast.info('Audio coming soon'), color: 'orange' },
+    { icon: FileVideo, label: 'Video', action: () => toast.info('Video layers coming soon'), color: 'red' },
+    { icon: Layout, label: 'Templates', action: () => toast.info('Templates coming soon'), color: 'indigo' },
+  ];
+
+  return (
+    <div className="w-20 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-4 gap-2">
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      
+      {tools.map((tool) => {
+        const Icon = tool.icon;
+        return (
+          <button
+            key={tool.label}
+            onClick={tool.action}
+            className="w-14 h-14 flex flex-col items-center justify-center rounded-lg hover:bg-gray-800 transition-colors group"
+            title={tool.label}
+          >
+            <Icon size={24} className="text-gray-400 group-hover:text-white transition-colors" />
+            <span className="text-[10px] text-gray-500 group-hover:text-gray-300 mt-1">
+              {tool.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
