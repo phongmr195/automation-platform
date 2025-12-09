@@ -5,6 +5,8 @@
 
 import { create } from 'zustand';
 import type { EditorState, HistoryState, ExportSettings, EditorElement } from './types';
+import type { Animation } from './animations/types';
+import type { Effect } from './effects/types';
 
 interface EditorStore extends EditorState {
   // History
@@ -44,6 +46,16 @@ interface EditorStore extends EditorState {
   moveLayerDown: (id: string) => void;
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
+  
+  // Animations
+  addAnimation: (elementId: string, animation: Animation) => void;
+  removeAnimation: (elementId: string, animationId: string) => void;
+  updateAnimation: (elementId: string, animationId: string, updates: Partial<Animation>) => void;
+  
+  // Effects
+  addEffect: (elementId: string, effect: Effect) => void;
+  removeEffect: (elementId: string, effectId: string) => void;
+  updateEffect: (elementId: string, effectId: string, updates: Partial<Effect>) => void;
 }
 
 const initialState: EditorState = {
@@ -195,4 +207,64 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       ],
     };
   }),
+
+  // Animation actions
+  addAnimation: (elementId, animation) => set((state) => ({
+    elements: state.elements.map((el) =>
+      el.id === elementId
+        ? { ...el, animations: [...(el.animations || []), animation] }
+        : el
+    ),
+  })),
+
+  removeAnimation: (elementId, animationId) => set((state) => ({
+    elements: state.elements.map((el) =>
+      el.id === elementId
+        ? { ...el, animations: (el.animations || []).filter((a) => a.id !== animationId) }
+        : el
+    ),
+  })),
+
+  updateAnimation: (elementId, animationId, updates) => set((state) => ({
+    elements: state.elements.map((el) =>
+      el.id === elementId
+        ? {
+            ...el,
+            animations: (el.animations || []).map((a) =>
+              a.id === animationId ? { ...a, ...updates } as Animation : a
+            ),
+          }
+        : el
+    ),
+  })),
+
+  // Effect actions
+  addEffect: (elementId, effect) => set((state) => ({
+    elements: state.elements.map((el) =>
+      el.id === elementId
+        ? { ...el, effects: [...(el.effects || []), effect] }
+        : el
+    ),
+  })),
+
+  removeEffect: (elementId, effectId) => set((state) => ({
+    elements: state.elements.map((el) =>
+      el.id === elementId
+        ? { ...el, effects: (el.effects || []).filter((e) => e.id !== effectId) }
+        : el
+    ),
+  })),
+
+  updateEffect: (elementId, effectId, updates) => set((state) => ({
+    elements: state.elements.map((el) =>
+      el.id === elementId
+        ? {
+            ...el,
+            effects: (el.effects || []).map((e) =>
+              e.id === effectId ? { ...e, ...updates } as Effect : e
+            ),
+          }
+        : el
+    ),
+  })),
 }));

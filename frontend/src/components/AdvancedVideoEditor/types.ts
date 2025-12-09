@@ -3,6 +3,9 @@
  * Complete type definitions for Canva-style editor
  */
 
+import type { Animation } from './animations/types';
+import type { Effect } from './effects/types';
+
 export type ElementType = 'text' | 'image' | 'shape' | 'video' | 'audio';
 export type ShapeType = 'rectangle' | 'circle' | 'triangle' | 'line' | 'arrow';
 export type AnimationType = 'none' | 'fadeIn' | 'fadeOut' | 'slideIn' | 'slideOut' | 'zoom' | 'bounce';
@@ -22,11 +25,16 @@ export interface BaseElement {
   startTime: number;
   duration: number;
   zIndex: number;
+  scaleX?: number;
+  scaleY?: number;
   animation?: {
     type: AnimationType;
     duration: number;
     delay: number;
   };
+  // NEW: Animation & Effects System
+  animations?: Animation[];
+  effects?: Effect[];
 }
 
 export interface TextElement extends BaseElement {

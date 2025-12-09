@@ -4,16 +4,13 @@ import Konva from 'konva';
 import useImage from 'use-image';
 import { useEditorStore } from './store';
 import type { EditorElement, TextElement, ShapeElement, ImageElement } from './types';
-import { getAnimatedProperties } from './engine/animationEngine';
-import { getEffectProperties } from './engine/effectEngine';
 
 const ImageRenderer: React.FC<{
   element: ImageElement;
   isSelected: boolean;
   onSelect: () => void;
   onChange: (updates: Partial<ImageElement>) => void;
-  currentTime: number;
-}> = ({ element, isSelected, onSelect, onChange, currentTime }) => {
+}> = ({ element, isSelected, onSelect, onChange }) => {
   const [image] = useImage(element.src);
   const imageRef = useRef<Konva.Image>(null);
   const trRef = useRef<Konva.Transformer>(null);
@@ -27,28 +24,17 @@ const ImageRenderer: React.FC<{
 
   if (!element.visible) return null;
 
-  // Apply animations and effects
-  const animated = getAnimatedProperties(element, currentTime);
-  const effects = getEffectProperties(element);
-
   return (
     <>
       <KonvaImage
         ref={imageRef}
         image={image}
-        x={animated.x}
-        y={animated.y}
+        x={element.x}
+        y={element.y}
         width={element.width}
         height={element.height}
-        scaleX={animated.scaleX}
-        scaleY={animated.scaleY}
-        rotation={animated.rotation}
-        opacity={animated.opacity}
-        shadowColor={effects.shadowColor}
-        shadowBlur={effects.shadowBlur}
-        shadowOffsetX={effects.shadowOffsetX}
-        shadowOffsetY={effects.shadowOffsetY}
-        shadowOpacity={effects.shadowOpacity}
+        rotation={element.rotation}
+        opacity={element.opacity}
         draggable={!element.locked}
         onClick={onSelect}
         onTap={onSelect}
@@ -93,8 +79,7 @@ const TextRenderer: React.FC<{
   isSelected: boolean;
   onSelect: () => void;
   onChange: (updates: Partial<TextElement>) => void;
-  currentTime: number;
-}> = ({ element, isSelected, onSelect, onChange, currentTime }) => {
+}> = ({ element, isSelected, onSelect, onChange }) => {
   const textRef = useRef<Konva.Text>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
@@ -107,30 +92,13 @@ const TextRenderer: React.FC<{
 
   if (!element.visible) return null;
 
-  // Apply animations and effects
-  const animated = getAnimatedProperties(element, currentTime, {
-    textLength: element.text.length,
-  });
-  const effects = getEffectProperties(element);
-
-  // Handle text reveal animation
-  const displayText = animated.textVisibleLength !== undefined
-    ? element.text.substring(0, animated.textVisibleLength)
-    : element.text;
-
-  // Merge effects with element shadow
-  const shadowColor = effects.shadowColor || element.shadow?.color;
-  const shadowBlur = effects.shadowBlur ?? element.shadow?.blur;
-  const shadowOffsetX = effects.shadowOffsetX ?? element.shadow?.offsetX;
-  const shadowOffsetY = effects.shadowOffsetY ?? element.shadow?.offsetY;
-
   return (
     <>
       <Text
         ref={textRef}
-        text={displayText}
-        x={animated.x}
-        y={animated.y}
+        text={element.text}
+        x={element.x}
+        y={element.y}
         width={element.width}
         fontSize={element.fontSize}
         fontFamily={element.fontFamily}
@@ -139,15 +107,8 @@ const TextRenderer: React.FC<{
         align={element.textAlign}
         lineHeight={element.lineHeight}
         letterSpacing={element.letterSpacing}
-        scaleX={animated.scaleX}
-        scaleY={animated.scaleY}
-        rotation={animated.rotation}
-        opacity={animated.opacity}
-        shadowColor={shadowColor}
-        shadowBlur={shadowBlur}
-        shadowOffsetX={shadowOffsetX}
-        shadowOffsetY={shadowOffsetY}
-        shadowOpacity={effects.shadowOpacity}
+        rotation={element.rotation}
+        opacity={element.opacity}
         draggable={!element.locked}
         onClick={onSelect}
         onTap={onSelect}
@@ -169,6 +130,10 @@ const TextRenderer: React.FC<{
             rotation: node.rotation(),
           });
         }}
+        shadowColor={element.shadow?.color}
+        shadowBlur={element.shadow?.blur}
+        shadowOffsetX={element.shadow?.offsetX}
+        shadowOffsetY={element.shadow?.offsetY}
       />
       {isSelected && (
         <Transformer
@@ -192,8 +157,7 @@ const ShapeRenderer: React.FC<{
   isSelected: boolean;
   onSelect: () => void;
   onChange: (updates: Partial<ShapeElement>) => void;
-  currentTime: number;
-}> = ({ element, isSelected, onSelect, onChange, currentTime }) => {
+}> = ({ element, isSelected, onSelect, onChange }) => {
   const shapeRef = useRef<Konva.Rect | Konva.Circle>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
@@ -206,25 +170,14 @@ const ShapeRenderer: React.FC<{
 
   if (!element.visible) return null;
 
-  // Apply animations and effects
-  const animated = getAnimatedProperties(element, currentTime);
-  const effects = getEffectProperties(element);
-
   const commonProps = {
-    x: animated.x,
-    y: animated.y,
-    scaleX: animated.scaleX,
-    scaleY: animated.scaleY,
+    x: element.x,
+    y: element.y,
     fill: element.fill,
     stroke: element.stroke,
     strokeWidth: element.strokeWidth,
-    rotation: animated.rotation,
-    opacity: animated.opacity,
-    shadowColor: effects.shadowColor,
-    shadowBlur: effects.shadowBlur,
-    shadowOffsetX: effects.shadowOffsetX,
-    shadowOffsetY: effects.shadowOffsetY,
-    shadowOpacity: effects.shadowOpacity,
+    rotation: element.rotation,
+    opacity: element.opacity,
     draggable: !element.locked,
     onClick: onSelect,
     onTap: onSelect,
@@ -373,7 +326,7 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
               />
             )}
 
-            {/* Render elements by zIndex with animations/effects */}
+            {/* Render elements by zIndex */}
             {visibleElements
               .sort((a, b) => a.zIndex - b.zIndex)
               .map((element) => {
@@ -387,7 +340,6 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
                       isSelected={isSelected}
                       onSelect={() => selectElement(element.id)}
                       onChange={(updates) => updateElement(element.id, updates)}
-                      currentTime={currentTime}
                     />
                   );
                 }
@@ -400,7 +352,6 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
                       isSelected={isSelected}
                       onSelect={() => selectElement(element.id)}
                       onChange={(updates) => updateElement(element.id, updates)}
-                      currentTime={currentTime}
                     />
                   );
                 }
@@ -413,7 +364,6 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
                       isSelected={isSelected}
                       onSelect={() => selectElement(element.id)}
                       onChange={(updates) => updateElement(element.id, updates)}
-                      currentTime={currentTime}
                     />
                   );
                 }

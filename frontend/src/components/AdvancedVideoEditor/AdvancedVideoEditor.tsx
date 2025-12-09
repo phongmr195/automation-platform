@@ -36,7 +36,6 @@ export const AdvancedVideoEditor: React.FC = () => {
     if (playing) {
       video.play().catch(err => {
         console.log('Video play error:', err);
-        // Browser autoplay policy - user needs to interact first
       });
     } else {
       video.pause();
@@ -86,7 +85,6 @@ export const AdvancedVideoEditor: React.FC = () => {
     const url = URL.createObjectURL(file);
     setVideoSrc(url);
     
-    // Get video metadata
     const tempVideo = document.createElement('video');
     tempVideo.src = url;
     tempVideo.onloadedmetadata = () => {
@@ -96,13 +94,11 @@ export const AdvancedVideoEditor: React.FC = () => {
   };
 
   const handleExport = async () => {
-    // Check if we have any content to export
     if (elements.length === 0) {
       toast.error('Please add some elements (text, images, shapes) first!');
       return;
     }
 
-    // Show appropriate message
     if (!videoSrc) {
       toast.info('📸 Creating video from images and text...');
     } else {
@@ -112,7 +108,6 @@ export const AdvancedVideoEditor: React.FC = () => {
     setExporting(true);
 
     try {
-      // Prepare export data
       const exportData = {
         videoSrc: (videoSrc && !videoSrc.startsWith('blob:')) ? videoSrc : null,
         elements: elements.map(el => ({
@@ -122,26 +117,19 @@ export const AdvancedVideoEditor: React.FC = () => {
         canvasWidth: useEditorStore.getState().canvasWidth,
         canvasHeight: useEditorStore.getState().canvasHeight,
         duration: useEditorStore.getState().duration,
-        backgroundColor: 'white', // White background when no video
+        backgroundColor: 'white',
       };
 
-      console.log('🎬 Sending export request to backend...');
-      console.log(`   Elements: ${elements.length}`);
-      console.log(`   Has video: ${!!videoSrc}`);
-      console.log(`   Duration: ${exportData.duration}s`);
+      console.log('🎬 Sending export request...');
       
-      // Call backend export API
       const response = await axios.post(`${API_BASE}/video-export/export`, exportData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 300000, // 5 minutes timeout for video processing
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 300000,
       });
       
       if (response.data.success) {
         toast.success('✅ Video exported successfully!');
         
-        // Download the exported video
         const downloadUrl = `${API_BASE}${response.data.url}`;
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -151,7 +139,6 @@ export const AdvancedVideoEditor: React.FC = () => {
         document.body.removeChild(link);
         
         toast.success(`📥 Downloading: ${response.data.filename}`);
-        console.log('✅ Export success:', response.data);
       } else {
         throw new Error(response.data.message || 'Export failed');
       }
@@ -164,15 +151,12 @@ export const AdvancedVideoEditor: React.FC = () => {
       } else if (error.message.includes('timeout')) {
         toast.error('Export timeout. Video might be too long.');
       } else if (error.code === 'ERR_NETWORK') {
-        toast.error('Cannot connect to backend. Is it running on port 3000?');
+        toast.error('Cannot connect to backend. Is it running?');
       } else {
-        toast.error('Export failed. Check console for details.');
+        toast.error('Export failed. Check console.');
       }
       
-      // Fallback: Export as JSON
-      console.log('💡 Falling back to JSON export...');
-      toast.info('💾 Saving project as JSON instead...');
-      
+      toast.info('💾 Saving as JSON instead...');
       const dataStr = JSON.stringify({
         elements,
         canvasWidth: useEditorStore.getState().canvasWidth,
@@ -236,19 +220,23 @@ export const AdvancedVideoEditor: React.FC = () => {
         onSave={handleSave}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Tools Panel */}
-        <ToolsPanel />
+      {/* Main Content Area - FIXED: ensure all panels visible */}
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Left: Tools Panel - FIXED: always visible */}
+        <div className="flex-shrink-0">
+          <ToolsPanel />
+        </div>
 
         {/* Center: Canvas Editor + Timeline */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <CanvasEditor videoRef={videoRef} />
           <TimelineEditor />
         </div>
 
-        {/* Right: Properties Panel */}
-        <PropertiesPanel />
+        {/* Right: Properties Panel - FIXED: always visible */}
+        <div className="flex-shrink-0">
+          <PropertiesPanel />
+        </div>
       </div>
 
       {/* Export Modal */}
@@ -264,12 +252,6 @@ export const AdvancedVideoEditor: React.FC = () => {
                 {videoSrc ? 'Adding effects to video' : 'Building video from images & text'}
               </p>
               <p className="text-gray-500 text-sm mt-2">This may take 1-3 minutes</p>
-              <div className="mt-4 text-gray-400 text-xs">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                  <span>FFmpeg processing...</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>

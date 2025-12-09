@@ -1,4 +1,6 @@
+import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { OrganizationSelector } from './OrganizationSelector';
 
@@ -6,25 +8,11 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [openMenu, setOpenMenu] = React.useState<string | null>(null);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
-  };
-
-  const isActive = (path: string) => {
-    if (path === '/workflows') {
-      return location.pathname === '/workflows' || location.pathname.startsWith('/editor');
-    }
-    return location.pathname === path || location.pathname.startsWith(path + '/');
-  };
-
-  const getLinkClass = (path: string) => {
-    const baseClass = "px-3 py-2 rounded-md text-sm font-medium transition-colors";
-    if (isActive(path)) {
-      return `${baseClass} text-indigo-600 bg-indigo-50 font-semibold`;
-    }
-    return `${baseClass} text-gray-700 hover:text-gray-900 hover:bg-gray-100`;
   };
 
   return (
@@ -56,60 +44,57 @@ export default function Navbar() {
                   <span className="font-medium">{user?.name || user?.email}</span>
                 </div>
 
-                {/* Workflows Link */}
-                <Link
-                  to="/workflows"
-                  className={getLinkClass('/workflows')}
-                >
-                  Workflows
-                </Link>
+                {/* Workflows Group - Clickable Dropdown */}
+                <div className="relative">
+                  <button
+                    className={`px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-1 ${openMenu === 'workflows' ? 'bg-indigo-50 text-indigo-600' : ''}`}
+                    onClick={e => {
+                      e.preventDefault();
+                      setOpenMenu(openMenu === 'workflows' ? null : 'workflows');
+                    }}
+                  >
+                    Workflows <ChevronDown size={16} />
+                  </button>
+                  <div className={`absolute left-0 mt-2 w-48 bg-white border rounded shadow-lg z-10 ${openMenu === 'workflows' ? '' : 'hidden'}`}>
+                    <Link to="/workflows" className="block px-4 py-2 text-gray-700 hover:bg-indigo-50">Workflows</Link>
+                    <Link to="/templates" className="block px-4 py-2 text-gray-700 hover:bg-indigo-50">Templates</Link>
+                  </div>
+                </div>
 
-                {/* Templates Link */}
-                <Link
-                  to="/templates"
-                  className={getLinkClass('/templates')}
-                >
-                  Templates
-                </Link>
+                {/* Video Tools Group - Clickable Dropdown */}
+                <div className="relative">
+                  <button
+                    className={`px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center gap-1 ${openMenu === 'video' ? 'bg-purple-50 text-purple-600' : ''}`}
+                    onClick={e => {
+                      e.preventDefault();
+                      setOpenMenu(openMenu === 'video' ? null : 'video');
+                    }}
+                  >
+                    Video Tools <ChevronDown size={16} />
+                  </button>
+                  <div className={`absolute left-0 mt-2 w-56 bg-white border rounded shadow-lg z-10 ${openMenu === 'video' ? '' : 'hidden'}`}>
+                    <Link to="/video-editor" className="block px-4 py-2 text-gray-700 hover:bg-purple-50">🎬 Video Editor</Link>
+                    <Link to="/video-editor-pro" className="block px-4 py-2 text-gray-700 hover:bg-purple-50">⭐ Video Studio Pro</Link>
+                  </div>
+                </div>
 
-                {/* Analytics Link */}
-                <Link
-                  to="/analytics"
-                  className={getLinkClass('/analytics')}
-                >
-                  Analytics
-                </Link>
-
-
-                {/* Video Editor Link */}
-                <Link
-                  to="/video-editor"
-                  className={getLinkClass('/video-editor')}
-                >
-                  🎬 Video Editor
-                </Link>
-
-                {/* Alerts Link */}
-                <Link
-                  to="/video-editor-pro"
-                  className="px-4 py-2 rounded-md text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium"
-                >
-                  ⭐ Video Studio Pro
-                </Link>
-                <Link
-                  to="/alerts"
-                  className={getLinkClass('/alerts')}
-                >
-                  Alerts
-                </Link>
-
-                {/* Monitoring Link */}
-                <Link
-                  to="/monitoring"
-                  className={getLinkClass('/monitoring')}
-                >
-                  Monitoring
-                </Link>
+                {/* Analytics & Monitoring Group - Clickable Dropdown */}
+                <div className="relative">
+                  <button
+                    className={`px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-pink-600 hover:bg-pink-50 transition-colors flex items-center gap-1 ${openMenu === 'analytics' ? 'bg-pink-50 text-pink-600' : ''}`}
+                    onClick={e => {
+                      e.preventDefault();
+                      setOpenMenu(openMenu === 'analytics' ? null : 'analytics');
+                    }}
+                  >
+                    Analytics & Monitoring <ChevronDown size={16} />
+                  </button>
+                  <div className={`absolute left-0 mt-2 w-56 bg-white border rounded shadow-lg z-10 ${openMenu === 'analytics' ? '' : 'hidden'}`}>
+                    <Link to="/analytics" className="block px-4 py-2 text-gray-700 hover:bg-pink-50">Analytics</Link>
+                    <Link to="/monitoring" className="block px-4 py-2 text-gray-700 hover:bg-pink-50">Monitoring</Link>
+                    <Link to="/alerts" className="block px-4 py-2 text-gray-700 hover:bg-pink-50">Alerts</Link>
+                  </div>
+                </div>
 
                 {/* Logout Button */}
                 <button

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useEditorStore } from './store';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, SkipBack } from 'lucide-react';
 
 export const TimelineEditor: React.FC = () => {
   const {
@@ -20,17 +20,29 @@ export const TimelineEditor: React.FC = () => {
   const [draggingElement, setDraggingElement] = useState<string | null>(null);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartTime, setDragStartTime] = useState(0);
-  
-  const pixelsPerSecond = 100;
 
-  const handleTimelineClick = (e: React.MouseEvent) => {
-    if (draggingElement) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const time = x / pixelsPerSecond;
-    seek(Math.max(0, Math.min(duration, time)));
+  const pixelsPerSecond = 50;
+  const timelineWidth = Math.max(duration * pixelsPerSecond, 800);
+  const trackHeight = 48; // Increased height for animation bars
+  const headerHeight = 40;
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Handle click on timeline to seek
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!timelineRef.current || draggingElement) return;
+    const rect = timelineRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left + timelineRef.current.scrollLeft;
+    const newTime = Math.max(0, Math.min(duration, x / pixelsPerSecond));
+    seek(newTime);
+  };
+
+  // Handle element drag on timeline
   const handleElementMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.stopPropagation();
     setDraggingElement(elementId);
@@ -44,11 +56,9 @@ export const TimelineEditor: React.FC = () => {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!draggingElement) return;
-    
     const deltaX = e.clientX - dragStartX;
     const deltaTime = deltaX / pixelsPerSecond;
     const newStartTime = Math.max(0, dragStartTime + deltaTime);
-    
     updateElement(draggingElement, { startTime: newStartTime });
   };
 
@@ -56,144 +66,190 @@ export const TimelineEditor: React.FC = () => {
     setDraggingElement(null);
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 10);
-    return `${mins}:${secs.toString().padStart(2, '0')}.${ms}`;
+  const animationColors: Record<string, string> = {
+    fade: 'bg-blue-500',
+    move: 'bg-green-500',
+    scale: 'bg-yellow-500',
+    rotate: 'bg-purple-500',
+    bounce: 'bg-pink-500',
+    textReveal: 'bg-cyan-500',
   };
 
   return (
-    <div 
-      className="h-64 bg-gray-900 border-t border-gray-800 flex flex-col"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      {/* Timeline Header */}
-      <div className="h-12 bg-gray-800 border-b border-gray-700 flex items-center px-4 gap-4">
-        <button
-          onClick={() => (playing ? pause() : play())}
-          className="p-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-        >
-          {playing ? <Pause size={16} /> : <Play size={16} />}
-        </button>
-        
-        <span className="text-white text-sm font-mono">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </span>
-        
-        <div className="flex-1" />
-        
-        <span className="text-gray-400 text-xs">
-          {elements.length} elements | Drag elements to move in time
-        </span>
-      </div>
+    <div className="h-64 bg-gray-900 border-t border-gray-800 flex flex-col">
+      {/* Controls */}
+      <div className="h-12 px-4 flex items-center justify-between border-b border-gray-800 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          {/* Reset to 0s Button */}
+          <button
+            onClick={() => seek(0)}
+            className="p-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            title="Reset to start (0s)"
+          >
+            <SkipBack size={18} />
+          </button>
+          
+          {/* Play/Pause */}
+          <button
+            onClick={() => (playing ? pause() : play())}
+            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            {playing ? <Pause size={18} /> : <Play size={18} />}
+          </button>
 
-      {/* Timeline Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Layer Names */}
-        <div className="w-40 bg-gray-900 border-r border-gray-800 overflow-y-auto">
-          <div className="h-8 border-b border-gray-800 flex items-center px-3">
-            <span className="text-gray-400 text-xs font-medium">LAYERS</span>
+          {/* Time Display */}
+          <div className="text-white text-sm font-mono">
+            {formatTime(currentTime)} / {formatTime(duration)}
           </div>
-          {elements.map((element) => (
-            <div
-              key={element.id}
-              onClick={() => selectElement(element.id)}
-              className={`h-12 border-b border-gray-800 flex items-center px-3 cursor-pointer hover:bg-gray-800 ${
-                selectedIds.includes(element.id) ? 'bg-gray-800' : ''
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded ${
-                  element.type === 'text' ? 'bg-purple-500' :
-                  element.type === 'image' ? 'bg-blue-500' :
-                  'bg-green-500'
-                }`} />
-                <span className="text-white text-sm truncate">
-                  {element.type === 'text' && '📝'}
-                  {element.type === 'image' && '🖼️'}
-                  {element.type === 'shape' && '🔷'}
-                  {' '}
-                  {element.type} {element.id.split('-')[1]?.slice(0, 4)}
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
 
-        {/* Timeline Tracks */}
-        <div className="flex-1 overflow-auto relative" ref={timelineRef}>
+        <div className="text-gray-400 text-xs">
+          {elements.length} elements | Click timeline to seek | Drag to move
+        </div>
+      </div>
+
+      {/* Timeline - WITH vertical scroll */}
+      <div 
+        ref={timelineRef}
+        className="flex-1 overflow-x-auto overflow-y-auto relative bg-gray-950"
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={handleTimelineClick}
+      >
+        <div 
+          style={{ 
+            width: timelineWidth,
+            minHeight: Math.max(elements.length * trackHeight + headerHeight + 20, 200)
+          }}
+          className="relative"
+        >
           {/* Time Ruler */}
-          <div className="h-8 bg-gray-800 border-b border-gray-700 relative">
+          <div className="h-10 border-b border-gray-800 flex items-center relative bg-gray-900 sticky top-0 z-20">
             {Array.from({ length: Math.ceil(duration) + 1 }).map((_, i) => (
               <div
                 key={i}
-                className="absolute top-0 bottom-0 border-l border-gray-700"
                 style={{ left: i * pixelsPerSecond }}
+                className="absolute flex flex-col items-start"
               >
-                <span className="absolute top-1 left-1 text-gray-500 text-[10px]">
-                  {i}s
-                </span>
+                <div className="w-px h-2 bg-gray-700"></div>
+                <span className="text-xs text-gray-600 ml-1">{i}s</span>
               </div>
             ))}
           </div>
 
-          {/* Element Tracks */}
-          <div className="relative" onClick={handleTimelineClick}>
-            {elements.map((element) => {
+          {/* Element Tracks with Animation Bars */}
+          <div className="relative" style={{ minHeight: elements.length * trackHeight + 20 }}>
+            {elements.map((element, index) => {
               const left = element.startTime * pixelsPerSecond;
               const width = element.duration * pixelsPerSecond;
+              const top = index * trackHeight + 12;
               const isSelected = selectedIds.includes(element.id);
               const isDragging = draggingElement === element.id;
+
+              const colors = {
+                text: 'bg-blue-600',
+                image: 'bg-green-600',
+                shape: 'bg-yellow-600',
+                video: 'bg-purple-600',
+                audio: 'bg-pink-600',
+              };
+
+              const animations = element.animations || [];
+              const hasAnimations = animations.length > 0;
 
               return (
                 <div
                   key={element.id}
-                  className="h-12 border-b border-gray-800 relative"
+                  className="relative"
+                  style={{ height: trackHeight }}
                 >
+                  {/* Main Element Bar */}
                   <div
-                    className={`absolute top-2 h-8 rounded cursor-move ${
-                      isSelected ? 'ring-2 ring-purple-500' : ''
-                    } ${isDragging ? 'opacity-70' : ''}`}
                     style={{
                       left: `${left}px`,
                       width: `${width}px`,
-                      backgroundColor: 
-                        element.type === 'text' ? '#8B5CF6' : 
-                        element.type === 'image' ? '#3B82F6' :
-                        element.type === 'shape' ? '#10B981' : '#6B7280',
-                      opacity: 0.8,
+                      top: `${top}px`,
                     }}
+                    className={`absolute h-7 rounded cursor-move transition-all ${
+                      colors[element.type] || 'bg-gray-600'
+                    } ${isSelected ? 'ring-2 ring-white shadow-lg' : ''} ${
+                      isDragging ? 'opacity-70 scale-105 z-30' : 'opacity-90 hover:opacity-100 hover:shadow-lg z-10'
+                    }`}
                     onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectElement(element.id);
+                    }}
                   >
-                    <div className="px-2 py-1 text-white text-xs truncate flex items-center justify-between">
-                      <span>{element.type}</span>
-                      <span className="text-[10px] opacity-70">{element.duration.toFixed(1)}s</span>
+                    <div className="px-2 py-1 text-white text-xs truncate font-medium flex items-center gap-1">
+                      <span className="opacity-70">{index + 1}.</span>
+                      {element.type === 'text' && (element as any).text
+                        ? (element as any).text.substring(0, 30)
+                        : `${element.type.charAt(0).toUpperCase() + element.type.slice(1)}`}
+                      {hasAnimations && <span className="ml-1">🎬</span>}
                     </div>
                   </div>
+
+                  {/* Animation Bars */}
+                  {animations.length > 0 && (
+                    <div
+                      style={{
+                        left: `${left}px`,
+                        width: `${width}px`,
+                        top: `${top + 28}px`,
+                      }}
+                      className="absolute h-4 flex gap-0.5"
+                    >
+                      {animations.map((anim) => {
+                        const animLeft = (anim.startTime - element.startTime) * pixelsPerSecond;
+                        const animWidth = anim.duration * pixelsPerSecond;
+                        const colorClass = animationColors[anim.type] || 'bg-gray-500';
+
+                        return (
+                          <div
+                            key={anim.id}
+                            style={{
+                              left: `${animLeft}px`,
+                              width: `${animWidth}px`,
+                            }}
+                            className={`absolute h-3 ${colorClass} rounded-sm opacity-70 hover:opacity-100 transition-opacity border border-gray-700`}
+                            title={`${anim.type} (${anim.startTime.toFixed(1)}s - ${(anim.startTime + anim.duration).toFixed(1)}s)`}
+                          >
+                            <span className="text-[8px] text-white px-1 opacity-80 capitalize">
+                              {anim.type}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* Playhead */}
+          {/* Playhead - higher z-index */}
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-50"
             style={{ left: currentTime * pixelsPerSecond }}
+            className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-40"
           >
-            <div className="w-3 h-3 bg-red-500 rounded-full -ml-1.5 -mt-1" />
+            <div className="absolute -top-1 -left-2 w-4 h-4 bg-red-500 rounded-full shadow-lg"></div>
+            <div className="absolute top-10 left-0 w-px h-full bg-red-500"></div>
           </div>
+        </div>
+      </div>
 
-          {/* Time Grid */}
-          <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: Math.ceil(duration) * 10 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute top-0 bottom-0 border-l border-gray-800"
-                style={{ left: (i * pixelsPerSecond) / 10 }}
-              />
+      {/* Legend */}
+      <div className="h-8 px-4 py-1 bg-gray-900 border-t border-gray-800 flex items-center gap-4 text-xs text-gray-500 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span>Animation colors:</span>
+          <div className="flex gap-2">
+            {Object.entries(animationColors).map(([type, color]) => (
+              <div key={type} className="flex items-center gap-1">
+                <div className={`w-2 h-2 rounded ${color}`}></div>
+                <span className="capitalize">{type}</span>
+              </div>
             ))}
           </div>
         </div>
