@@ -43,6 +43,14 @@ import { NotionNode } from './NotionNode';
 import { VideoEditorNode } from './VideoEditorNode';
 import { TrelloNode } from './TrelloNode';
 
+// AI Nodes
+import { AIInvokeExecutor } from './AIInvokeNode';
+import { AITransformExecutor } from './AITransformNode';
+import { AIExtractExecutor } from './AIExtractNode';
+import { AIClassifierExecutor } from './AIClassifierNode';
+import { AIVisionExecutor } from './AIVisionNode';
+import { AIPlannerExecutor } from './AIPlannerNode';
+
 /**
  * Initialize and register all nodes
  */
@@ -697,6 +705,136 @@ export function registerAllNodes(): void {
       { name: 'metadata', type: 'object' }
     ],
   });
+
+  // ==================== AI NODES ====================
+
+  // AI Invoke Node
+  nodeRegistry.register({
+    type: 'ai-invoke',
+    category: 'ai',
+    name: 'AI Invoke',
+    description: 'General-purpose AI text generation with streaming support',
+    executor: new AIInvokeExecutor(),
+    inputs: [
+      { name: 'prompt', type: 'string', required: true, description: 'Prompt text (supports {{variable}} interpolation)' },
+      { name: 'systemPrompt', type: 'string', required: false, description: 'System prompt (optional)' },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-sonnet-4.5' },
+      { name: 'temperature', type: 'number', required: false, description: 'Temperature (0-1)', default: 0.7 },
+      { name: 'maxTokens', type: 'number', required: false, description: 'Max output tokens', default: 4096 },
+      { name: 'streaming', type: 'boolean', required: false, description: 'Enable streaming', default: false },
+    ],
+    outputs: [
+      { name: 'response', type: 'string', description: 'AI response text' },
+      { name: 'usage', type: 'object', description: 'Token usage and cost' },
+      { name: 'model', type: 'string', description: 'Model used' },
+      { name: 'latency', type: 'number', description: 'Response latency (ms)' },
+      { name: 'cached', type: 'boolean', description: 'Whether response was cached' },
+    ],
+  });
+
+  // AI Transform Node
+  nodeRegistry.register({
+    type: 'ai-transform',
+    category: 'ai',
+    name: 'AI Transform',
+    description: 'Transform data using AI with structured output',
+    executor: new AITransformExecutor(),
+    inputs: [
+      { name: 'input', type: 'any', required: true, description: 'Input data to transform' },
+      { name: 'instruction', type: 'string', required: true, description: 'Transformation instruction' },
+      { name: 'outputFormat', type: 'string', required: false, description: 'text, json, markdown, or code', default: 'json' },
+      { name: 'outputSchema', type: 'object', required: false, description: 'JSON Schema for validation (optional)' },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-sonnet-4.5' },
+    ],
+    outputs: [
+      { name: 'transformed', type: 'any', description: 'Transformed data' },
+      { name: 'usage', type: 'object', description: 'Token usage' },
+      { name: 'validationErrors', type: 'array', description: 'Schema validation errors (if any)' },
+    ],
+  });
+
+  // AI Extract Node
+  nodeRegistry.register({
+    type: 'ai-extract',
+    category: 'ai',
+    name: 'AI Extract',
+    description: 'Extract structured data from unstructured text',
+    executor: new AIExtractExecutor(),
+    inputs: [
+      { name: 'text', type: 'string', required: true, description: 'Text to extract from' },
+      { name: 'extractionSchema', type: 'object', required: true, description: 'Schema defining fields to extract' },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-sonnet-4.5' },
+    ],
+    outputs: [
+      { name: 'extracted', type: 'object', description: 'Extracted structured data' },
+      { name: 'confidence', type: 'number', description: 'Extraction confidence (0-1)' },
+      { name: 'usage', type: 'object', description: 'Token usage' },
+    ],
+  });
+
+  // AI Classifier Node
+  nodeRegistry.register({
+    type: 'ai-classifier',
+    category: 'ai',
+    name: 'AI Classifier',
+    description: 'Classify text into predefined categories',
+    executor: new AIClassifierExecutor(),
+    inputs: [
+      { name: 'input', type: 'string', required: true, description: 'Text to classify' },
+      { name: 'classes', type: 'array', required: true, description: 'Array of classification classes' },
+      { name: 'multiLabel', type: 'boolean', required: false, description: 'Allow multiple labels', default: false },
+      { name: 'confidenceThreshold', type: 'number', required: false, description: 'Minimum confidence (0-1)', default: 0.5 },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-sonnet-4.5' },
+    ],
+    outputs: [
+      { name: 'classifications', type: 'array', description: 'Array of classifications with confidence' },
+      { name: 'primaryLabel', type: 'string', description: 'Most confident label' },
+      { name: 'usage', type: 'object', description: 'Token usage' },
+    ],
+  });
+
+  // AI Vision Node
+  nodeRegistry.register({
+    type: 'ai-vision',
+    category: 'ai',
+    name: 'AI Vision',
+    description: 'Analyze images using vision-enabled AI models',
+    executor: new AIVisionExecutor(),
+    inputs: [
+      { name: 'images', type: 'array', required: true, description: 'Array of images (URL or base64)' },
+      { name: 'prompt', type: 'string', required: true, description: 'Analysis prompt' },
+      { name: 'task', type: 'string', required: false, description: 'describe, analyze, extract, ocr, or detect' },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-sonnet-4.5' },
+    ],
+    outputs: [
+      { name: 'analysis', type: 'string', description: 'Text analysis result' },
+      { name: 'structured', type: 'object', description: 'Structured data (if applicable)' },
+      { name: 'usage', type: 'object', description: 'Token usage' },
+    ],
+  });
+
+  // AI Planner Node
+  nodeRegistry.register({
+    type: 'ai-planner',
+    category: 'ai',
+    name: 'AI Planner',
+    description: 'Agent-like planning and multi-step reasoning',
+    executor: new AIPlannerExecutor(),
+    inputs: [
+      { name: 'goal', type: 'string', required: true, description: 'Goal to achieve' },
+      { name: 'context', type: 'object', required: false, description: 'Contextual information' },
+      { name: 'availableTools', type: 'array', required: false, description: 'Available tools for execution' },
+      { name: 'maxSteps', type: 'number', required: false, description: 'Maximum planning steps', default: 10 },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-opus-4.5' },
+    ],
+    outputs: [
+      { name: 'plan', type: 'array', description: 'Step-by-step plan' },
+      { name: 'finalOutput', type: 'any', description: 'Final execution output' },
+      { name: 'usage', type: 'object', description: 'Token usage' },
+      { name: 'steps', type: 'number', description: 'Number of steps executed' },
+    ],
+  });
+
   console.log(`\n📦 Registered ${nodeRegistry.getAllNodes().length} workflow nodes`);
 }
 
@@ -729,6 +867,13 @@ export {
   RedisNode,
   AirtableNode,
   FirebaseNode,
+  // AI Nodes
+  AIInvokeExecutor,
+  AITransformExecutor,
+  AIExtractExecutor,
+  AIClassifierExecutor,
+  AIVisionExecutor,
+  AIPlannerExecutor,
   // Productivity Nodes
   GoogleSheetsNode,
   NotionNode,

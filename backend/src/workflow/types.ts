@@ -112,7 +112,7 @@ export interface INodeExecutor {
  */
 export interface NodeDefinition {
   type: string; // unique identifier
-  category: 'trigger' | 'action' | 'logic' | 'transform' | 'communication' | 'storage' | 'database' | 'productivity';
+  category: 'trigger' | 'action' | 'logic' | 'transform' | 'communication' | 'storage' | 'database' | 'productivity' | 'ai' | 'media';
   name: string;
   description: string;
   executor: INodeExecutor;
