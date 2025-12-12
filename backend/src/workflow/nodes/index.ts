@@ -50,6 +50,7 @@ import { AIExtractExecutor } from './AIExtractNode';
 import { AIClassifierExecutor } from './AIClassifierNode';
 import { AIVisionExecutor } from './AIVisionNode';
 import { AIPlannerExecutor } from './AIPlannerNode';
+import { AIAgentExecutor } from './AIAgentNode';
 
 /**
  * Initialize and register all nodes
@@ -835,6 +836,42 @@ export function registerAllNodes(): void {
     ],
   });
 
+  // AI Agent Node (Autonomous Agent)
+  nodeRegistry.register({
+    type: 'ai-agent',
+    category: 'ai',
+    name: 'AI Agent',
+    description: 'Autonomous AI agent with reasoning, planning, and tool execution',
+    executor: new AIAgentExecutor(),
+    inputs: [
+      { name: 'input', type: 'any', required: false, description: 'Input data for the agent' },
+      { name: 'instructions', type: 'string', required: false, description: 'Task instructions' },
+      { name: 'model', type: 'string', required: false, description: 'AI model', default: 'claude-sonnet-4.5' },
+      { name: 'role', type: 'string', required: false, description: 'assistant, orchestrator, specialist, analyst', default: 'assistant' },
+      { name: 'systemPrompt', type: 'string', required: false, description: 'Custom system prompt' },
+      { name: 'temperature', type: 'number', required: false, description: 'Creativity (0-1)', default: 0.7 },
+      { name: 'maxSteps', type: 'number', required: false, description: 'Maximum execution steps', default: 20 },
+      { name: 'maxToolCalls', type: 'number', required: false, description: 'Maximum tool calls', default: 30 },
+      { name: 'allowedTools', type: 'array', required: false, description: 'Whitelist of allowed tools' },
+      { name: 'blockedTools', type: 'array', required: false, description: 'Blacklist of blocked tools' },
+      { name: 'useMemory', type: 'boolean', required: false, description: 'Enable memory', default: false },
+      { name: 'memoryType', type: 'string', required: false, description: 'short_term, long_term, or both', default: 'short_term' },
+      { name: 'safetyMode', type: 'string', required: false, description: 'strict, moderate, or permissive', default: 'moderate' },
+      { name: 'outputFormat', type: 'string', required: false, description: 'result_only, simple, or full', default: 'full' },
+      { name: 'sessionId', type: 'string', required: false, description: 'Resume existing session' },
+    ],
+    outputs: [
+      { name: 'output', type: 'any', description: 'Final agent output' },
+      { name: 'reasoning', type: 'string', description: 'Agent reasoning process' },
+      { name: 'confidence', type: 'number', description: 'Confidence score (0-1)' },
+      { name: 'steps', type: 'array', description: 'Execution steps taken' },
+      { name: 'toolCalls', type: 'array', description: 'Tools called during execution' },
+      { name: 'metrics', type: 'object', description: 'Performance metrics (duration, tokens, cost)' },
+      { name: 'nextActions', type: 'array', description: 'Suggested next workflow actions' },
+      { name: 'sessionId', type: 'string', description: 'Session ID for continuation' },
+    ],
+  });
+
   console.log(`\n📦 Registered ${nodeRegistry.getAllNodes().length} workflow nodes`);
 }
 
@@ -874,6 +911,7 @@ export {
   AIClassifierExecutor,
   AIVisionExecutor,
   AIPlannerExecutor,
+  AIAgentExecutor,
   // Productivity Nodes
   GoogleSheetsNode,
   NotionNode,
