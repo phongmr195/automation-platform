@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { EditorState, HistoryState, ExportSettings, EditorElement } from './types';
+import type { EditorState, HistoryState, ExportSettings, EditorElement, VideoAsset, VideoClip, VideoTrack } from './types';
 import type { Animation } from './animations/types';
 import type { Effect } from './effects/types';
 
@@ -56,6 +56,20 @@ interface EditorStore extends EditorState {
   addEffect: (elementId: string, effect: Effect) => void;
   removeEffect: (elementId: string, effectId: string) => void;
   updateEffect: (elementId: string, effectId: string, updates: Partial<Effect>) => void;
+  
+  // Multi-Video Management
+  addVideoAsset: (asset: VideoAsset) => void;
+  removeVideoAsset: (assetId: string) => void;
+  addVideoTrack: () => string; // returns track id
+  removeVideoTrack: (trackId: string) => void;
+  addClipToTrack: (clip: VideoClip) => void;
+  updateClip: (clipId: string, updates: Partial<VideoClip>) => void;
+  deleteClip: (clipId: string) => void;
+  selectClip: (clipId: string, multi?: boolean) => void;
+  deselectAllClips: () => void;
+  reorderClips: (trackId: string, fromIndex: number, toIndex: number) => void;
+  splitClip: (clipId: string, splitTime: number) => void;
+  setActiveVideoClip: (clip: VideoClip | null) => void;
 }
 
 const initialState: EditorState = {
@@ -68,6 +82,10 @@ const initialState: EditorState = {
   videoSrc: null,
   canvasWidth: 1920,
   canvasHeight: 1080,
+  videoAssets: [],
+  videoTracks: [],
+  selectedClipIds: [],
+  activeVideoClip: null,
 };
 
 export const useEditorStore = create<EditorStore>((set, get) => ({
@@ -267,4 +285,170 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         : el
     ),
   })),
+
+  // Multi-Video Management Implementations
+  addVideoAsset: (asset) => set((state) => ({
+    videoAssets: [...state.videoAssets, asset],
+  })),
+
+  removeVideoAsset: (assetId) => set((state) => ({
+    videoAssets: state.videoAssets.filter((a) => a.id !== assetId),
+    // Also remove all clips using this asset
+    videoTracks: state.videoTracks.map((track) => ({
+      ...track,
+      clips: track.clips.filter((clip) => clip.assetId !== assetId),
+    })),
+  })),
+
+  addVideoTrack: () => {
+    const trackId = `track-${Date.now()}`;
+    set((state) => ({
+      videoTracks: [
+        ...state.videoTracks,
+        {
+          id: trackId,
+          name: `Track ${state.videoTracks.length + 1}`,
+          clips: [],
+          locked: false,
+          visible: true,
+          volume: 1,
+        },
+      ],
+    }));
+    return trackId;
+  },
+
+  removeVideoTrack: (trackId) => set((state) => ({
+    videoTracks: state.videoTracks.filter((t) => t.id !== trackId),
+  })),
+
+  addClipToTrack: (clip) => set((state) => {
+    const updatedTracks = state.videoTracks.map((track, idx) => {
+      if (idx !== clip.trackIndex) return track;
+      const newClips = [...track.clips, clip];
+      let currentTime = 0;
+      const sequentialClips = newClips
+        .sort((a, b) => a.startTime - b.startTime)
+        .map((c) => {
+          const updated = { ...c, startTime: currentTime };
+          currentTime += c.duration;
+          return updated;
+        });
+      return { ...track, clips: sequentialClips };
+    });
+    // Calculate total video duration
+    const allClips = updatedTracks.flatMap(t => t.clips);
+    const totalDuration = allClips.reduce((sum, c) => sum + c.duration, 0);
+    return {
+      videoTracks: updatedTracks,
+      duration: Math.max(30, totalDuration),
+    };
+  }),
+
+  updateClip: (clipId, updates) => set((state) => ({
+    videoTracks: state.videoTracks.map((track) => ({
+      ...track,
+      clips: track.clips.map((clip) =>
+        clip.id === clipId ? { ...clip, ...updates } : clip
+      ),
+    })),
+  })),
+
+  deleteClip: (clipId) => set((state) => {
+    const updatedTracks = state.videoTracks.map((track) => ({
+      ...track,
+      clips: track.clips.filter((clip) => clip.id !== clipId),
+    }));
+    const allClips = updatedTracks.flatMap(t => t.clips);
+    const totalDuration = allClips.reduce((sum, c) => sum + c.duration, 0);
+    return {
+      videoTracks: updatedTracks,
+      selectedClipIds: state.selectedClipIds.filter((id) => id !== clipId),
+      duration: Math.max(30, totalDuration),
+    };
+  }),
+
+  selectClip: (clipId, multi = false) => set((state) => ({
+    selectedClipIds: multi
+      ? state.selectedClipIds.includes(clipId)
+        ? state.selectedClipIds.filter((id) => id !== clipId)
+        : [...state.selectedClipIds, clipId]
+      : [clipId],
+  })),
+
+  deselectAllClips: () => set({ selectedClipIds: [] }),
+
+  reorderClips: (trackId, fromIndex, toIndex) => set((state) => {
+    const track = state.videoTracks.find((t) => t.id === trackId);
+    if (!track) return state;
+
+    const clips = [...track.clips];
+    const [movedClip] = clips.splice(fromIndex, 1);
+    clips.splice(toIndex, 0, movedClip);
+    // Recalculate startTimes to be sequential
+    let currentTime = 0;
+    const sequentialClips = clips.map((c) => {
+      const updated = { ...c, startTime: currentTime };
+      currentTime += c.duration;
+      return updated;
+    });
+    const updatedTracks = state.videoTracks.map((t) =>
+      t.id === trackId ? { ...t, clips: sequentialClips } : t
+    );
+    const allClips = updatedTracks.flatMap(t => t.clips);
+    const totalDuration = allClips.reduce((sum, c) => sum + c.duration, 0);
+    return {
+      videoTracks: updatedTracks,
+      duration: Math.max(30, totalDuration),
+    };
+  }),
+
+  splitClip: (clipId, splitTime) => set((state) => {
+    let newTracks = [...state.videoTracks];
+
+    for (let i = 0; i < newTracks.length; i++) {
+      const track = newTracks[i];
+      const clipIndex = track.clips.findIndex((c) => c.id === clipId);
+
+      if (clipIndex !== -1) {
+        const clip = track.clips[clipIndex];
+        const relativeTime = splitTime - clip.startTime;
+
+        if (relativeTime <= 0 || relativeTime >= clip.duration) {
+          return state; // Invalid split time
+        }
+
+        // Create two new clips
+        const clip1: VideoClip = {
+          ...clip,
+          id: `${clip.id}-1`,
+          duration: relativeTime,
+          trimEnd: clip.trimStart + relativeTime,
+        };
+
+        const clip2: VideoClip = {
+          ...clip,
+          id: `${clip.id}-2`,
+          startTime: clip.startTime + relativeTime,
+          duration: clip.duration - relativeTime,
+          trimStart: clip.trimStart + relativeTime,
+        };
+
+        // Replace the original clip with two new clips
+        const newClips = [
+          ...track.clips.slice(0, clipIndex),
+          clip1,
+          clip2,
+          ...track.clips.slice(clipIndex + 1),
+        ];
+
+        newTracks[i] = { ...track, clips: newClips };
+        break;
+      }
+    }
+
+    return { videoTracks: newTracks };
+  }),
+
+  setActiveVideoClip: (clip) => set({ activeVideoClip: clip }),
 }));

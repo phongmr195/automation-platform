@@ -7,12 +7,14 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { TimelineEditor } from './TimelineEditor';
 import { useEditorStore } from './store';
 import { toast } from '../../utils/alerts';
+import { VideoSequencer } from './videoSequencer';
 
 const API_BASE = 'http://localhost:3000';
 
 export const AdvancedVideoEditor: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const sequencerRef = useRef<VideoSequencer | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const { 
@@ -26,7 +28,65 @@ export const AdvancedVideoEditor: React.FC = () => {
     pause,
     seek,
     videoSrc,
+    videoTracks,
+    videoAssets,
+    setActiveVideoClip,
   } = useEditorStore();
+
+  // Initialize video sequencer
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    const sequencer = new VideoSequencer(videoRef.current, {
+      onTimeUpdate: (time) => seek(time),
+      onPlayStateChange: (isPlaying) => {
+        if (isPlaying) play();
+        else pause();
+      },
+      onClipChange: (clip) => setActiveVideoClip(clip),
+    });
+
+    sequencerRef.current = sequencer;
+
+    return () => {
+      sequencer.destroy();
+      sequencerRef.current = null;
+    };
+  }, [play, pause, seek, setActiveVideoClip]);
+
+  // Update sequencer when video clips or assets change
+  useEffect(() => {
+    if (!sequencerRef.current) return;
+
+    const allClips = videoTracks.flatMap((track) => track.clips);
+    sequencerRef.current.updateClips(allClips, videoAssets);
+
+    // Update duration based on last clip
+    if (allClips.length > 0) {
+      const maxTime = Math.max(
+        ...allClips.map((clip) => clip.startTime + clip.duration),
+        duration
+      );
+      setDuration(maxTime);
+    }
+  }, [videoTracks, videoAssets, duration, setDuration]);
+
+  // Handle play/pause from sequencer
+  useEffect(() => {
+    if (!sequencerRef.current) return;
+
+    if (playing) {
+      sequencerRef.current.play();
+    } else {
+      sequencerRef.current.pause();
+    }
+  }, [playing]);
+
+  // Handle seek from timeline
+  useEffect(() => {
+    if (!sequencerRef.current || playing) return;
+    sequencerRef.current.seek(currentTime);
+  }, [currentTime, playing]);
 
   // Sync video playback with timeline
   useEffect(() => {

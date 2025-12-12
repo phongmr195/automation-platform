@@ -81,6 +81,51 @@ export interface VideoElement extends BaseElement {
   src: string;
   volume: number;
   playbackRate: number;
+  // Video-specific trim data
+  trimStart?: number; // seconds from original video start
+  trimEnd?: number; // seconds from original video end
+  originalDuration?: number; // full duration of source video
+}
+
+// Uploaded video asset metadata
+export interface VideoAsset {
+  id: string;
+  name: string;
+  src: string; // blob URL or server URL
+  duration: number;
+  width: number;
+  height: number;
+  thumbnail?: string; // base64 or URL
+  size: number; // bytes
+  type: string; // mime type
+  uploadedAt: Date;
+}
+
+// Video clip on timeline (derived from VideoAsset)
+export interface VideoClip {
+  id: string;
+  assetId: string; // reference to VideoAsset
+  trackIndex: number; // which track this clip is on
+  startTime: number; // position on timeline
+  duration: number; // visible duration on timeline
+  trimStart: number; // trim from original video start
+  trimEnd: number; // trim from original video end
+  volume: number;
+  playbackRate: number;
+  transitions?: {
+    in?: TransitionType;
+    out?: TransitionType;
+  };
+}
+
+// Video track container
+export interface VideoTrack {
+  id: string;
+  name: string;
+  clips: VideoClip[];
+  locked: boolean;
+  visible: boolean;
+  volume: number;
 }
 
 export interface AudioElement extends BaseElement {
@@ -102,6 +147,11 @@ export interface EditorState {
   videoSrc: string | null;
   canvasWidth: number;
   canvasHeight: number;
+  // Multi-video support
+  videoAssets: VideoAsset[];
+  videoTracks: VideoTrack[];
+  selectedClipIds: string[]; // for video clip selection
+  activeVideoClip: VideoClip | null; // currently playing clip
 }
 
 export interface HistoryState {

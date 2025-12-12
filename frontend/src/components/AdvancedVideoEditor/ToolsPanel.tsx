@@ -1,14 +1,16 @@
-import React, { useRef } from 'react';
-import { Type, Image, Square, Circle, Music, FileVideo, Layout } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Type, Image, Square, Circle, Music, FileVideo, Layout, Upload, X } from 'lucide-react';
 import { useEditorStore } from './store';
 import type { TextElement, ImageElement, ShapeElement } from './types';
 import { toast } from '../../utils/alerts';
+import { VideoUploadPanel } from './VideoUploadPanel';
 
 export const ToolsPanel: React.FC = () => {
   const addElement = useEditorStore((state) => state.addElement);
   const canvasWidth = useEditorStore((state) => state.canvasWidth);
   const canvasHeight = useEditorStore((state) => state.canvasHeight);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [showVideoUpload, setShowVideoUpload] = useState(false);
 
   const addText = () => {
     const textElement: TextElement = {
@@ -97,36 +99,71 @@ export const ToolsPanel: React.FC = () => {
     { icon: Square, label: 'Rectangle', action: () => addShape('rectangle'), color: 'green' },
     { icon: Circle, label: 'Circle', action: () => addShape('circle'), color: 'yellow' },
     { icon: Music, label: 'Audio', action: () => toast.info('Audio coming soon'), color: 'orange' },
-    { icon: FileVideo, label: 'Video', action: () => toast.info('Video layers coming soon'), color: 'red' },
+    { icon: FileVideo, label: 'Videos', action: () => setShowVideoUpload(!showVideoUpload), color: 'red' },
     { icon: Layout, label: 'Templates', action: () => toast.info('Templates coming soon'), color: 'indigo' },
   ];
 
   return (
-    <div className="w-20 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-4 gap-2">
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
-      
-      {tools.map((tool) => {
-        const Icon = tool.icon;
-        return (
-          <button
-            key={tool.label}
-            onClick={tool.action}
-            className="w-14 h-14 flex flex-col items-center justify-center rounded-lg hover:bg-gray-800 transition-colors group"
-            title={tool.label}
-          >
-            <Icon size={24} className="text-gray-400 group-hover:text-white transition-colors" />
-            <span className="text-[10px] text-gray-500 group-hover:text-gray-300 mt-1">
-              {tool.label}
-            </span>
-          </button>
-        );
-      })}
+    <div className="flex">
+      {/* Main Tool Icons */}
+      <div className="w-20 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-4 gap-2">
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
+        
+        {tools.map((tool) => {
+          const Icon = tool.icon;
+          const isActive = tool.label === 'Videos' && showVideoUpload;
+          return (
+            <button
+              key={tool.label}
+              onClick={tool.action}
+              className={`
+                w-14 h-14 flex flex-col items-center justify-center rounded-lg 
+                transition-colors group
+                ${isActive ? 'bg-purple-600' : 'hover:bg-gray-800'}
+              `}
+              title={tool.label}
+            >
+              <Icon 
+                size={24} 
+                className={`transition-colors ${
+                  isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                }`}
+              />
+              <span className={`
+                text-[10px] mt-1 transition-colors
+                ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}
+              `}>
+                {tool.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Video Upload Panel (Slide-out) */}
+      {showVideoUpload && (
+        <div className="w-80 bg-gray-950 border-r border-gray-800 overflow-y-auto">
+          <div className="sticky top-0 bg-gray-950 border-b border-gray-800 p-3 flex items-center justify-between z-10">
+            <h2 className="text-white font-medium flex items-center gap-2">
+              <FileVideo size={18} />
+              Video Library
+            </h2>
+            <button
+              onClick={() => setShowVideoUpload(false)}
+              className="p-1 hover:bg-gray-800 rounded transition-colors"
+            >
+              <X size={18} className="text-gray-400" />
+            </button>
+          </div>
+          <VideoUploadPanel />
+        </div>
+      )}
     </div>
   );
 };

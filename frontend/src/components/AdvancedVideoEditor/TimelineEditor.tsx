@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useEditorStore } from './store';
-import { Play, Pause, SkipBack } from 'lucide-react';
+import { Play, Pause, SkipBack, Film } from 'lucide-react';
+import { VideoTimelineClip } from './VideoTimelineClip';
 
 export const TimelineEditor: React.FC = () => {
   const {
@@ -14,6 +15,13 @@ export const TimelineEditor: React.FC = () => {
     selectedIds,
     selectElement,
     updateElement,
+    // Video-related state
+    videoTracks,
+    videoAssets,
+    selectedClipIds,
+    selectClip,
+    addClipToTrack,
+    reorderClips,
   } = useEditorStore();
 
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -116,6 +124,36 @@ export const TimelineEditor: React.FC = () => {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onClick={handleTimelineClick}
+        onDragOver={e => {
+          if (e.dataTransfer.types.includes('application/x-video-asset-id')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }
+        }}
+        onDrop={e => {
+          const assetId = e.dataTransfer.getData('application/x-video-asset-id');
+          if (!assetId) return;
+          if (!timelineRef.current) return;
+          const rect = timelineRef.current.getBoundingClientRect();
+          const x = e.clientX - rect.left + timelineRef.current.scrollLeft;
+          const dropTime = Math.max(0, x / pixelsPerSecond);
+          // For now, always drop on first track (trackIndex 0)
+          const trackIndex = 0;
+          const asset = videoAssets.find(a => a.id === assetId);
+          if (!asset) return;
+          const clip = {
+            id: `clip-${asset.id}-${Date.now()}`,
+            assetId: asset.id,
+            trackIndex,
+            startTime: dropTime,
+            duration: asset.duration,
+            trimStart: 0,
+            trimEnd: asset.duration,
+            volume: 1,
+            playbackRate: 1,
+          };
+          addClipToTrack(clip);
+        }}
       >
         <div 
           style={{ 
@@ -137,6 +175,49 @@ export const TimelineEditor: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* Video Tracks Section */}
+          {videoTracks.length > 0 && (
+            <div className="relative mb-6">
+              <div className="bg-gray-900/50 p-2 border-b border-gray-800 flex items-center gap-2">
+                <Film size={14} className="text-purple-400" />
+                <span className="text-xs text-gray-400 font-medium">Video Tracks</span>
+              </div>
+              {videoTracks.map((track) => (
+                <div
+                  key={track.id}
+                  className="relative h-20 border-b border-gray-800 bg-gray-950/50"
+                >
+                  {/* Track Label */}
+                  <div className="absolute left-0 top-0 bottom-0 w-24 bg-gray-900 border-r border-gray-800 flex items-center justify-center">
+                    <span className="text-xs text-gray-400">{track.name}</span>
+                  </div>
+
+                  {/* Track Content (Clips) */}
+                  <div className="absolute left-24 right-0 top-2 bottom-2">
+                    {track.clips.map((clip) => {
+                      const asset = videoAssets.find((a) => a.id === clip.assetId);
+                      if (!asset) return null;
+
+                      return (
+                        <VideoTimelineClip
+                          key={clip.id}
+                          clip={clip}
+                          asset={asset}
+                          pixelsPerSecond={pixelsPerSecond}
+                          isSelected={selectedClipIds.includes(clip.id)}
+                          onSelect={() => selectClip(clip.id)}
+                          reorderClips={reorderClips}
+                          trackId={track.id}
+                          clips={track.clips}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Element Tracks with Animation Bars */}
           <div className="relative" style={{ minHeight: elements.length * trackHeight + 20 }}>
