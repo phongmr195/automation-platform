@@ -139,7 +139,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   deselectAll: () => set({ selectedIds: [] }),
 
-  play: () => set({ playing: true }),
+  play: () => {
+    console.log('[Store] play() action called');
+    set({ playing: true });
+  },
   pause: () => set({ playing: false }),
   seek: (time) => set({ currentTime: time }),
 

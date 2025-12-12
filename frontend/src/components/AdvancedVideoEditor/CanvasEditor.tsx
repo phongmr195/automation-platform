@@ -294,6 +294,9 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
     zoom,
     currentTime,
     videoSrc,
+    videoTracks,
+    videoAssets,
+    activeVideoClip,
   } = useEditorStore();
 
   const stageRef = useRef<Konva.Stage>(null);
@@ -302,6 +305,13 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
   const visibleElements = elements.filter(
     (el) => currentTime >= el.startTime && currentTime <= el.startTime + el.duration
   );
+
+  // Determine which video clip should be displayed at current time
+  const allClips = videoTracks.flatMap(track => track.clips);
+  const currentVideoClip = allClips.find(
+    clip => currentTime >= clip.startTime && currentTime < clip.startTime + clip.duration
+  );
+  const currentVideoAsset = currentVideoClip ? videoAssets.find(a => a.id === currentVideoClip.assetId) : null;
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const clickedOnEmpty = e.target === e.target.getStage();
@@ -323,8 +333,8 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
         }}
         className="shadow-2xl"
       >
-        {/* Video Background */}
-        {videoSrc && videoRef && (
+        {/* Video Background - Sequential Playback from Timeline */}
+        {videoRef && (currentVideoAsset || videoSrc) && (
           <div
             style={{
               position: 'absolute',
@@ -336,16 +346,31 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
             }}
           >
             <video
-              ref={videoRef}
-              src={videoSrc}
+              ref={el => {
+                if (videoRef) {
+                  videoRef.current = el;
+                  console.log('[CanvasEditor] videoRef set', el);
+                }
+              }}
+              src={currentVideoAsset?.src || videoSrc || ''}
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
                 backgroundColor: '#000',
+                display: currentVideoAsset || videoSrc ? 'block' : 'none',
               }}
               muted
               playsInline
+              onPlay={() => {
+                console.log('[CanvasEditor] video element onPlay', videoRef?.current?.src);
+              }}
+              onPause={() => {
+                console.log('[CanvasEditor] video element onPause', videoRef?.current?.src);
+              }}
+              onLoadedData={() => {
+                console.log('[CanvasEditor] video element onLoadedData', videoRef?.current?.src);
+              }}
             />
           </div>
         )}
@@ -363,8 +388,8 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
           }}
         >
           <Layer>
-            {/* Transparent background for click detection */}
-            {!videoSrc && (
+            {/* Background for click detection */}
+            {!currentVideoAsset && !videoSrc && (
               <Rect
                 x={0}
                 y={0}
@@ -428,7 +453,9 @@ export const CanvasEditor: React.FC<{ videoRef?: React.RefObject<HTMLVideoElemen
       {/* Canvas Info Overlay */}
       <div className="absolute bottom-4 left-4 bg-gray-900 bg-opacity-90 px-3 py-2 rounded-lg text-xs text-gray-400">
         {canvasWidth} × {canvasHeight} | {Math.round(zoom * 100)}% | {visibleElements.length} visible
-        {videoSrc && ' | 🎥 Video loaded'}
+        {currentVideoAsset && ` | 🎥 ${currentVideoAsset.name}`}
+        {!currentVideoAsset && videoSrc && ' | 🎥 Video loaded'}
+        {allClips.length > 0 && ` | ${allClips.length} clip${allClips.length > 1 ? 's' : ''}`}
       </div>
     </div>
   );

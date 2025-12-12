@@ -52,26 +52,32 @@ export class VideoSequencer {
   async seek(time: number): Promise<void> {
     const clip = this.findClipAtTime(time);
 
-    if (clip && clip !== this.currentClip) {
-      // Switch to new clip
-      await this.loadClip(clip);
-      this.currentClip = clip;
-      this.onClipChange(clip);
-    }
-
     if (clip) {
+      // Check if we need to switch clips
+      if (clip !== this.currentClip || this.videoElement.src !== this.assets.get(clip.assetId)?.src) {
+        // Switch to new clip
+        await this.loadClip(clip);
+        this.currentClip = clip;
+        this.onClipChange(clip);
+      }
+
       // Calculate position within the clip's trimmed source
       const relativeTime = time - clip.startTime;
       const sourceTime = clip.trimStart + relativeTime;
 
       // Set video element time
-      this.videoElement.currentTime = sourceTime;
+      if (Math.abs(this.videoElement.currentTime - sourceTime) > 0.1) {
+        this.videoElement.currentTime = sourceTime;
+      }
       this.onTimeUpdate(time);
     } else {
-      // No clip at this time - pause playback
-      this.videoElement.pause();
-      this.currentClip = null;
-      this.onClipChange(null);
+      // No clip at this time - clear video and pause
+      if (this.currentClip) {
+        this.videoElement.pause();
+        this.videoElement.src = '';
+        this.currentClip = null;
+        this.onClipChange(null);
+      }
       this.onTimeUpdate(time);
     }
   }
@@ -115,7 +121,15 @@ export class VideoSequencer {
   /**
    * Start playback from current position
    */
-  async play(): Promise<void> {
+  async play(timelineTime?: number): Promise<void> {
+    // Always seek to the provided timeline time (or 0 if at/past end)
+    const totalDuration = this.clips.length > 0 ? this.clips[this.clips.length - 1].startTime + this.clips[this.clips.length - 1].duration : 0;
+    let seekTime = typeof timelineTime === 'number' ? timelineTime : this.videoElement.currentTime;
+    if (seekTime >= totalDuration - 0.05) {
+      seekTime = 0;
+    }
+    await this.seek(seekTime);
+
     if (!this.currentClip) {
       // Find first clip if none is active
       if (this.clips.length > 0) {
@@ -123,14 +137,24 @@ export class VideoSequencer {
       }
     }
 
+    console.log('[VideoSequencer] play() called. paused:', this.videoElement.paused, 'src:', this.videoElement.src);
     if (this.videoElement.paused) {
       try {
-        await this.videoElement.play();
+        const playPromise = this.videoElement.play();
+        if (playPromise && playPromise.then) {
+          playPromise.then(() => {
+            console.log('[VideoSequencer] videoElement.play() resolved');
+          }).catch((err) => {
+            console.error('[VideoSequencer] videoElement.play() error:', err);
+          });
+        }
         this.onPlayStateChange(true);
         this.startUpdateLoop();
       } catch (error) {
         console.error('Play error:', error);
       }
+    } else {
+      console.log('[VideoSequencer] videoElement already playing');
     }
   }
 
@@ -160,21 +184,31 @@ export class VideoSequencer {
       const timelineTime = this.currentClip.startTime + relativeTime;
 
       // Check if we've reached the end of this clip
-      if (sourceTime >= this.currentClip.trimEnd || relativeTime >= this.currentClip.duration) {
-        // Find next clip
-        const nextClip = this.findClipAtTime(timelineTime + 0.1);
+      if (sourceTime >= this.currentClip.trimEnd - 0.05 || relativeTime >= this.currentClip.duration - 0.05) {
+        // Calculate next timeline position
+        const nextTime = this.currentClip.startTime + this.currentClip.duration;
+        const nextClip = this.findClipAtTime(nextTime);
 
         if (nextClip) {
           // Seamlessly transition to next clip
           this.seek(nextClip.startTime).then(() => {
-            if (!this.videoElement.paused) {
-              this.videoElement.play();
-            }
+            // Wait for loadeddata before playing
+            const onLoadedData = () => {
+              this.videoElement.removeEventListener('loadeddata', onLoadedData);
+              this.videoElement.play().catch(err => {
+                console.error('Failed to play next clip:', err);
+              });
+            };
+            this.videoElement.addEventListener('loadeddata', onLoadedData);
+          }).catch(err => {
+            console.error('Failed to seek to next clip:', err);
+            this.pause();
           });
         } else {
           // No more clips - stop playback
           this.pause();
-          this.onTimeUpdate(timelineTime);
+          this.onTimeUpdate(nextTime);
+          return;
         }
       } else {
         // Update timeline time

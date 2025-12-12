@@ -36,7 +36,7 @@ export const AdvancedVideoEditor: React.FC = () => {
   // Initialize video sequencer
   useEffect(() => {
     if (!videoRef.current) return;
-
+    console.log('[AdvancedVideoEditor] useEffect: videoRef.current changed:', videoRef.current);
     const sequencer = new VideoSequencer(videoRef.current, {
       onTimeUpdate: (time) => seek(time),
       onPlayStateChange: (isPlaying) => {
@@ -45,14 +45,13 @@ export const AdvancedVideoEditor: React.FC = () => {
       },
       onClipChange: (clip) => setActiveVideoClip(clip),
     });
-
     sequencerRef.current = sequencer;
-
+    console.log('[AdvancedVideoEditor] sequencerRef.current set', sequencerRef.current);
     return () => {
       sequencer.destroy();
       sequencerRef.current = null;
     };
-  }, [play, pause, seek, setActiveVideoClip]);
+  }, [videoRef.current]);
 
   // Update sequencer when video clips or assets change
   useEffect(() => {
@@ -72,72 +71,39 @@ export const AdvancedVideoEditor: React.FC = () => {
   }, [videoTracks, videoAssets, duration, setDuration]);
 
   // Handle play/pause from sequencer
+  // Only trigger play when both playing is true and sequencerRef.current is set
   useEffect(() => {
+    console.log('[AdvancedVideoEditor] useEffect([playing, sequencerRef.current]) fired. playing:', playing, 'sequencerRef.current:', sequencerRef.current);
     if (!sequencerRef.current) return;
 
     if (playing) {
-      sequencerRef.current.play();
+      sequencerRef.current.play(currentTime);
     } else {
       sequencerRef.current.pause();
     }
-  }, [playing]);
+  }, [playing, sequencerRef.current, currentTime]);
 
-  // Handle seek from timeline
+  // If sequencerRef.current is set after playing is already true, trigger play immediately
+  useEffect(() => {
+    if (sequencerRef.current && playing) {
+      console.log('[AdvancedVideoEditor] sequencerRef became available while playing=true, triggering play from currentTime', currentTime);
+      sequencerRef.current.play(currentTime);
+    }
+  }, [sequencerRef.current, playing, currentTime]);
+
+  // Handle seek from timeline (when not playing)
   useEffect(() => {
     if (!sequencerRef.current || playing) return;
-    sequencerRef.current.seek(currentTime);
-  }, [currentTime, playing]);
-
-  // Sync video playback with timeline
-  useEffect(() => {
-    if (!videoRef.current || !videoSrc) return;
-
-    const video = videoRef.current;
-
-    if (playing) {
-      video.play().catch(err => {
-        console.log('Video play error:', err);
-      });
-    } else {
-      video.pause();
+    const allClips = videoTracks.flatMap((track) => track.clips);
+    if (allClips.length > 0) {
+      sequencerRef.current.seek(currentTime);
     }
-  }, [playing, videoSrc]);
+  }, [currentTime, playing, videoTracks]);
 
-  // Sync video time with timeline
+  // Update timeline when playing without video clips (elements only)
   useEffect(() => {
-    if (!videoRef.current || !videoSrc) return;
-    const video = videoRef.current;
-    if (Math.abs(video.currentTime - currentTime) > 0.1) {
-      video.currentTime = currentTime;
-    }
-  }, [currentTime, videoSrc]);
-
-  // Update timeline when video plays
-  useEffect(() => {
-    if (!videoRef.current || !playing) return;
-
-    const video = videoRef.current;
-    let animationFrame: number;
-
-    const updateTime = () => {
-      if (video && !video.paused) {
-        seek(video.currentTime);
-        animationFrame = requestAnimationFrame(updateTime);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(updateTime);
-
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [playing, seek]);
-
-  // Update timeline when playing without video (elements only)
-  useEffect(() => {
-    if (videoSrc || !playing) return; // Only run when no video
+    const allClips = videoTracks.flatMap((track) => track.clips);
+    if (allClips.length > 0 || !playing) return; // Only run when no video clips
 
     let animationFrame: number;
     let lastTime = performance.now();
@@ -165,7 +131,7 @@ export const AdvancedVideoEditor: React.FC = () => {
         cancelAnimationFrame(animationFrame);
       }
     };
-  }, [playing, currentTime, duration, videoSrc, seek, pause]);
+  }, [playing, currentTime, duration, videoTracks, seek, pause]);
 
   const handleUploadVideo = () => {
     fileInputRef.current?.click();

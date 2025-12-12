@@ -96,11 +96,13 @@ export const TimelineEditor: React.FC = () => {
           >
             <SkipBack size={18} />
           </button>
-          
-          {/* Play/Pause */}
           <button
-            onClick={() => (playing ? pause() : play())}
-            className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className={`px-3 py-1 rounded ${playing ? 'bg-purple-600' : 'bg-gray-700'} text-white font-bold mr-2`}
+            onClick={() => {
+              console.log('[TimelineEditor] Play button clicked');
+              if (playing) pause();
+              else play();
+            }}
           >
             {playing ? <Pause size={18} /> : <Play size={18} />}
           </button>
