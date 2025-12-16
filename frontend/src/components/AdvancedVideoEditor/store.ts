@@ -344,7 +344,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const totalDuration = allClips.reduce((sum, c) => sum + c.duration, 0);
     return {
       videoTracks: updatedTracks,
-      duration: Math.max(30, totalDuration),
+      duration: totalDuration,
     };
   }),
 
@@ -367,7 +367,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     return {
       videoTracks: updatedTracks,
       selectedClipIds: state.selectedClipIds.filter((id) => id !== clipId),
-      duration: Math.max(30, totalDuration),
+      duration: totalDuration,
     };
   }),
 
@@ -402,7 +402,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const totalDuration = allClips.reduce((sum, c) => sum + c.duration, 0);
     return {
       videoTracks: updatedTracks,
-      duration: Math.max(30, totalDuration),
+      duration: totalDuration,
     };
   }),
 
